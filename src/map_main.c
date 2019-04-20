@@ -8,11 +8,14 @@
 #include <assert.h>
 
 int main() {
-  char const* str;
+  //char const* str;
 
   Map* m = newMap();
   assert(m);
-
+  assert(addRoad(m, "A", "B", 1, 2020));
+  assert(addRoad(m, "B", "C", 1, 2020));
+  //assert(repairRoad(m, "B", "D", 2020));
+  /*
   assert(addRoad(m, "Alinów", "Bór", 1, 2020));
   assert(addRoad(m, "Bór", "Cielińsk-Niekłańsk", 2, 2020));
   assert(addRoad(m, "Bór", "Dąb Stary", 3, 2020));
@@ -34,7 +37,6 @@ int main() {
   assert(repairRoad(m, "Emiliew", "Fraźnik Nowy", 2023));
   assert(addRoad(m, "Homilcin", "Cielińsk-Niekłańsk", 3, 2020));
   assert(newRoute(m, 10, "Alinów", "Emiliew"));
-
   str = getRouteDescription(m, 10);
   assert(strcmp(str, "10;Alinów;1;2020;Bór;2;2020;Cielińsk-Niekłańsk;4;2021;Emiliew") == 0);
   free((void *)str);
@@ -47,6 +49,6 @@ int main() {
   free((void *)str);
 
   deleteMap(m);
-
+  */
   return 0;
 }

@@ -11,6 +11,25 @@
 
 #include <stdbool.h>
 
+struct City {
+  const char *name;
+  struct Road {
+    struct City *to;
+    unsigned length;
+    int year;
+    struct Road *next;
+  };
+  struct road *roads;
+  struct City *next;
+};
+
+typedef struct City City;
+typedef struct Road Road;
+
+struct Map{
+  City *cities;
+};
+
 /**
  * Struktura przechowująca mapę dróg krajowych.
  */
