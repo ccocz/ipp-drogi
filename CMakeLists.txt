@@ -22,7 +22,11 @@ set(CMAKE_C_FLAGS "-std=c11 -Wall -Wextra")
 # Wskazujemy pliki źródłowe.
 set(SOURCE_FILES
     src/map.c
+    src/heap.c
+    src/queue.c
     src/map.h
+    src/heap.h
+    src/queue.h
     src/map_main.c)
 
 # Wskazujemy plik wykonywalny.

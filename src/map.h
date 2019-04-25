@@ -10,24 +10,40 @@
 #define __MAP_H__
 
 #include <stdbool.h>
+#include "heap.h"
+
+#define N 7213
+#define R 1000
+
+typedef struct Road Road;
+typedef struct City City;
+typedef struct HeapNode HeapNode;
+typedef struct Route Route;
+typedef struct Routes Routes;
 
 struct City {
   const char *name;
-  struct Road {
-    struct City *to;
-    unsigned length;
-    int year;
-    struct Road *next;
-  };
-  struct road *roads;
-  struct City *next;
+  City *next;
+  City *prev;
+  HeapNode *heapNode;
+  Road *roads;
 };
 
-typedef struct City City;
-typedef struct Road Road;
+struct Road {
+  City *to;
+  unsigned length;
+  int year;
+  Road *next;
+};
+
+struct Route {
+  City *city;
+  Route *next;
+};
 
 struct Map{
-  City *cities;
+  City *cities[N];
+  Route *routes[R];
 };
 
 /**
@@ -155,5 +171,7 @@ bool removeRoad(Map *map, const char *city1, const char *city2);
  * @return Wskaźnik na napis lub NULL, gdy nie udało się zaalokować pamięci.
  */
 char const* getRouteDescription(Map *map, unsigned routeId);
+
+void freeMap(Map *map);
 
 #endif /* __MAP_H__ */
