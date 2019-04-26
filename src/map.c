@@ -1,36 +1,54 @@
 #include "map.h"
 #include "heap.h"
+#include "stack.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+// checkYear
+
 void freeMap(Map *map) {
   City *aux, *help;
-  Road *roads, *helpRoads;
+  Edges *edges, *helpEdges;
   for (int i = 0; i < N; i++) {
     aux = map->cities[i];
     while (aux) {
       help = aux;
-      roads = aux->roads;
-      while (roads) {
-        helpRoads = roads;
-        roads = roads->next;
-        free(helpRoads);
+      edges = aux->edges;
+      while (edges) {
+        helpEdges = edges;
+        edges = edges->next;
+        free(helpEdges);
       }
+      free(aux->name);
       aux = aux->next;
       free(help);
     }
   }
-  Route *route, *helpRoute;
+  Route *route;
   for (int i = 0; i < R; i++) {
     route = map->routes[i];
-    while (route) {
-      helpRoute = route;
-      route = route->next;
-      free(helpRoute);
+    if (route) {
+      edges = route->edges;
+      while (edges) {
+        helpEdges = edges;
+        edges = edges->next;
+        free(helpEdges);
+      }
+      free(route);
     }
   }
+  Road *roads = map->roads, *helpRoads;
+  while (roads) {
+    helpRoads = roads;
+    roads = roads->next;
+    free(helpRoads);
+  }
   free(map);
+}
+
+void deleteMap(Map *map) {
+  freeMap(map);
 }
 
 Map *newMap(void) {
@@ -44,12 +62,13 @@ Map *newMap(void) {
     for (int i = 0; i < R; i++) {
       aux->routes[i] = NULL;
     }
+    aux->roads = NULL;
     return aux;
   }
 }
 
 bool badName(const char *city) {
-  int n = strlen(city);
+  size_t n = strlen(city);
   for (size_t i = 0; i < n; i++) {
     if (city[i] <= 31 || city[i] == ';') {
       return true;
@@ -59,7 +78,7 @@ bool badName(const char *city) {
 }
 
 int hashIt(const char *s) {
-  int n = strlen(s);
+  size_t n = strlen(s);
   int mod = N;
   int base = 1453;
   int hash = 0;
@@ -82,48 +101,63 @@ City *cityExists(Map *map, const char *city) {
   return NULL;
 }
 
+char *makeCopy(const char *city) {
+  size_t n = strlen(city);
+  char *copy = malloc(n + 1);
+  for (size_t i = 0; i < n; i++) {
+    copy[i] = city[i];
+  }
+  copy[n] = '\0';
+  return copy;
+}
+
 City *addCity(Map *map, const char *city) {
-  int n = strlen(city);
   int hash = hashIt(city);
   City *where = map->cities[hash];
   City *aux = malloc(sizeof(City));
-  aux->name = malloc(sizeof(char) * n);
-  aux->name = city;
-  aux->roads = NULL;
+  aux->name = makeCopy(city);
+  aux->edges = NULL;
   aux->heapNode = NULL;
   aux->next = where;
-  if (where) {
-    where->prev = aux;
-  }
   map->cities[hash] = aux;
   return aux;
 }
 
 Road *isConnected(City *city1, City *city2) {
-  Road *aux = city1->roads;
-  while (aux) {
-    if (aux->to == city2) {
-      return aux;
+  Edges *edges = city1->edges;
+  while (edges) {
+    if (edges->road->from == city2 || edges->road->to == city2) {
+      return edges->road;
     }
-    aux = aux->next;
+    edges = edges->next;
   }
   return NULL;
 }
 
-void addEdge(City *from, City *to,
-             unsigned length, int builtYear) {
-  Road *aux = malloc(sizeof(Road));
-  aux->to = to;
-  aux->length = length;
-  aux->year = builtYear;
-  aux->next = from->roads;
-  from->roads = aux;
+void addEdge(City *city, Road *road) {
+  Edges *help = malloc(sizeof(Edges));
+  help->road = road;
+  help->next = city->edges;
+  if (city->edges) {
+    city->edges->prev = help;
+  }
+  city->edges = help;
 }
 
-void connectCities(City *city1, City *city2,
+void connectCities(Map *map, City *city1, City *city2,
                    unsigned length, int builtYear) {
-  addEdge(city1, city2, length, builtYear);
-  addEdge(city2, city1, length, builtYear);
+  Road *aux = malloc(sizeof(Road));
+  aux->from = city1;
+  aux->to = city2;
+  aux->length = length;
+  aux->year = builtYear;
+  aux->next = map->roads;
+  if (map->roads) {
+    map->roads->prev = aux;
+  }
+  map->roads = aux;
+  addEdge(city1, aux);
+  addEdge(city2, aux);
 }
 
 bool addRoad(Map *map, const char *city1, const char *city2,
@@ -136,15 +170,15 @@ bool addRoad(Map *map, const char *city1, const char *city2,
   }
   City *first, *second;
   if (!(first = cityExists(map, city1))) {
-    first = addCity(map, city1); // check allocation
+    first = addCity(map, city1);
   }
   if (!(second = cityExists(map, city2))) {
-    second = addCity(map, city2); // check allocation
+    second = addCity(map, city2);
   }
   if (isConnected(first, second)) {
     return false;
   }
-  connectCities(first, second, length, builtYear);
+  connectCities(map, first, second, length, builtYear);
   // check allocation
   return true;
 }
@@ -160,14 +194,13 @@ bool repairRoad(Map *map, const char *city1,
     return false;
   }
   Road *go = isConnected(first, second);
-  Road *come = isConnected(second, first);
-  if (!go || !come) {
+  if (!go) {
     return false;
   }
   if (go->year > repairYear) {
     return false;
   }
-  go->year = come->year = repairYear;
+  go->year = repairYear;
   return true;
 }
 
@@ -175,35 +208,36 @@ inline int maxi(int x, int y) {
   return x > y ? x : y;
 }
 
-Route *Dijkstra(Map *map, City *source, City *destination) {
-  Heap *Q = newHeap(source);
-  City *aux;
-  for (int i = 0; i < N; i++) {
-    aux = map->cities[i];
-    while (aux) {
-      if (aux != source) {
-        insertHeap(Q, aux);
-      }
-      aux = aux->next;
-    }
+City *toCity(Road *road, City *from) {
+  if (road->to == from) {
+    return road->from;
+  } else {
+    return road->to;
   }
+}
+
+void dijkstra(Heap *Q) {
   HeapNode *best;
-  Road *adj;
+  Edges *adj;
+  Road *adjRoad;
+  City *adjCity;
   while (Q->root) {
     heapifyMin(Q->root);
     best = minHeap(Q);
-    adj = best->city->roads;
+    adj = best->city->edges;
     while (adj) {
-      if (!adj->to->heapNode->visited) {
-        if (best->distance + adj->length < adj->to->heapNode->distance) {
-          decreaseValue(adj->to->heapNode, best->distance + adj->length, maxi(best->year, adj->year));
-          adj->to->heapNode->from = best->city;
-          adj->to->heapNode->lastYear = adj->year;
-        } else if (best->distance + adj->length == adj->to->heapNode->distance) {
-          if (maxi(best->year, adj->year) > adj->to->heapNode->year) {
-            decreaseValue(adj->to->heapNode, best->distance + adj->length, maxi(best->year, adj->year));
-            adj->to->heapNode->from= best->city;
-            adj->to->heapNode->lastYear = adj->year;
+      adjRoad = adj->road;
+      adjCity = toCity(adjRoad, best->city);
+      if (!adjCity->heapNode->visited) {
+        if (best->distance + adjRoad->length < adjCity->heapNode->distance) {
+          decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, maxi(best->year, adjRoad->year));
+          adjCity->heapNode->from = adjRoad;
+          adjCity->heapNode->lastYear = adjRoad->year;
+        } else if (best->distance + adjRoad->length == adjCity->heapNode->distance) {
+          if (maxi(best->year, adjRoad->year) > adjCity->heapNode->year) {
+            decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, maxi(best->year, adjRoad->year));
+            adjCity->heapNode->from = adjRoad;
+            adjCity->heapNode->lastYear = adjRoad->year;
           }
         }
       }
@@ -211,29 +245,83 @@ Route *Dijkstra(Map *map, City *source, City *destination) {
     }
     freeMe(Q, best);
   }
+}
+
+bool checkUnique(City *destination) {
+  Road *adjRoad;
+  City *adjCity;
+  Edges *toDest = destination->edges;
   bool ok = true;
-  Road *toDest = destination->roads;
   while (ok && toDest) {
-    if (toDest->to != destination->heapNode->from) {
-      if (toDest->to->heapNode->distance + toDest->length == destination->heapNode->distance &&
-          maxi(toDest->to->heapNode->year, toDest->year) == destination->heapNode->year) {
-        ok = false;
-      }
+    adjCity = toCity(toDest->road, destination);
+    adjRoad = toDest->road;
+    if (adjRoad != destination->heapNode->from &&
+        adjCity->heapNode->distance + adjRoad->length == destination->heapNode->distance &&
+        maxi(adjCity->heapNode->year, adjRoad->year) == destination->heapNode->year) {
+      ok = false;
     }
     toDest = toDest->next;
   }
-  Route *ret = NULL, *help;
-  if (ok) {
-    City *traverse = destination;
-    while (traverse) {
-      puts(traverse->name);
-      help = malloc(sizeof(Route));
-      help->city = traverse;
-      help->next = ret;
-      ret = help;
-      traverse = traverse->heapNode->from;
+  return ok;
+}
+
+Route *makeRoute(City *source, City *destination) {
+  Edges *edgesHelp;
+  Route *ret = malloc(sizeof(Route));
+  ret->start = source;
+  ret->end = destination;
+  ret->edges = NULL;
+  City *traverse = destination;
+  while (traverse) {
+    puts(traverse->name);
+    edgesHelp = malloc(sizeof(Edges));
+    edgesHelp->road = traverse->heapNode->from;
+    edgesHelp->next = ret->edges;
+    if (ret->edges) {
+      ret->edges->prev = edgesHelp;
+    }
+    ret->edges = edgesHelp;
+    if (traverse->heapNode->from) {
+      traverse = toCity(traverse->heapNode->from, traverse);
+    } else {
+      traverse = NULL;
     }
   }
+  return ret;
+}
+
+void addHeap(Heap *Q, City *source) {
+  Stack *stack = NULL;
+  addStack(&stack, source);
+  Edges *edges;
+  City *adjCity;
+  while (!isEmptyStack(stack)) {
+    source = popStack(&stack);
+    edges = source->edges;
+    while (edges) {
+      adjCity = toCity(edges->road, source);
+      if (!adjCity->heapNode) {
+        insertHeap(Q, adjCity);
+        addStack(&stack, adjCity);
+      }
+      edges = edges->next;
+    }
+  }
+}
+
+Route *startDijkstra(Map *map, City *source, City *destination) {
+  Heap *Q = newHeap(source);
+  addHeap(Q, source);
+  dijkstra(Q);
+  bool ok = true;
+  Route *ret = NULL;
+  if (!destination->heapNode->from || !checkUnique(destination)) {
+    ok = false;
+  }
+  if (ok) {
+    ret = makeRoute(source, destination);
+  }
+  City *aux;
   for (int i = 0; i < N; i++) {
     aux = map->cities[i];
     while (aux) {
@@ -261,7 +349,7 @@ bool newRoute(Map *map, unsigned routeId,
   if (!first || !second) {
     return false;
   }
-  Route *ans = Dijkstra(map, first, second);
+  Route *ans = startDijkstra(map, first, second);
   if (!ans) {
     return false;
   } else {
@@ -270,59 +358,3 @@ bool newRoute(Map *map, unsigned routeId,
   }
 }
 
-inline int lgp(unsigned x) {
-  int ret = 0;
-  while (x) {
-    ret++;
-    x /= 10;
-  }
-  return ret;
-}
-
-inline void copy(unsigned  x, int from, char *s) {
-  while (x) {
-    s[from--] = (char)((x % 10) + 'a');
-    x /= 10;
-  }
-}
-
-inline void copyStr(const char *from, char *to, int start) {
-  for (int i = start; i < start + (int)strlen(from); i++) {
-    to[i] = from[i - start];
-  }
-}
-
-char const *getRouteDescription(Map *map, unsigned routeId) {
-  if (map->routes[routeId] == NULL) {
-    return "";
-  } else {
-    int length = lgp(routeId);
-    int totalAlloced = length;
-    int lgo;
-    char const *ret = malloc(sizeof(char) * length);
-    copy(routeId, length - 1, ret);
-    Route *aux = map->routes[routeId];
-    Road *help;
-    while (aux) {
-      if (length + strlen(aux->city->name) > totalAlloced) {
-        ret = realloc(ret, sizeof(char) * (totalAlloced * 3 / 2 + 1));
-        copyStr(aux->city->name, ret, length);
-      }
-      if (aux->next) {
-        help = isConnected(aux->city, aux->next->city);
-        lgo =  lgp(help->length);
-        if (length + lgo > totalAlloced) {
-          ret = realloc(ret, sizeof(char) * (totalAlloced * 3 / 2 + 1));
-        }
-        copy(help->length, length + lgo - 1, ret);
-        lgo =  lgp(help->year);
-        if (length + lgo > totalAlloced) {
-          ret = realloc(ret, sizeof(char) * (totalAlloced * 3 / 2 + 1));
-        }
-        copy(help->length, length + lgo - 1, ret);
-      }
-      aux->next = NULL;
-    }
-    return ret;
-  }
-}

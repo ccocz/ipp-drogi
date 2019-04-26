@@ -8,13 +8,14 @@ typedef struct City City;
 typedef struct HeapNode HeapNode;
 typedef struct Heap Heap;
 typedef struct Queue Queue;
+typedef struct Road Road;
 
 struct HeapNode{
   City *city;
-  City *from;
+  Road *from;
   bool visited;
   int lastYear;
-  int distance;
+  unsigned distance;
   int year;
   struct HeapNode *parent;
   struct HeapNode *left;

@@ -4,6 +4,8 @@
 #include "heap.h"
 
 typedef struct HeapNode HeapNode;
+typedef struct QueueNode QueueNode;
+typedef struct Queue Queue;
 
 struct QueueNode{
   HeapNode *node;
@@ -11,14 +13,10 @@ struct QueueNode{
   struct QueueNode *prev;
 };
 
-typedef struct QueueNode QueueNode;
-
 struct Queue{
   QueueNode *head;
   QueueNode *tail;
 };
-
-typedef struct Queue Queue;
 
 Queue *newQueue(void);
 void pushQueue(Queue *queue, HeapNode *node);

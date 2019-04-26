@@ -19,31 +19,40 @@ typedef struct Road Road;
 typedef struct City City;
 typedef struct HeapNode HeapNode;
 typedef struct Route Route;
-typedef struct Routes Routes;
+typedef struct Edges Edges;
 
 struct City {
-  const char *name;
+  char *name;
   City *next;
-  City *prev;
   HeapNode *heapNode;
-  Road *roads;
+  Edges *edges;
 };
 
 struct Road {
+  City *from;
   City *to;
   unsigned length;
   int year;
   Road *next;
+  Road *prev;
+};
+
+struct Edges{
+  Road *road;
+  Edges *prev;
+  Edges *next;
 };
 
 struct Route {
-  City *city;
-  Route *next;
+  City *start;
+  City *end;
+  Edges *edges;
 };
 
 struct Map{
   City *cities[N];
   Route *routes[R];
+  Road *roads;
 };
 
 /**
@@ -171,7 +180,5 @@ bool removeRoad(Map *map, const char *city1, const char *city2);
  * @return Wskaźnik na napis lub NULL, gdy nie udało się zaalokować pamięci.
  */
 char const* getRouteDescription(Map *map, unsigned routeId);
-
-void freeMap(Map *map);
 
 #endif /* __MAP_H__ */

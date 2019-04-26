@@ -61,16 +61,19 @@ void swapInfo(HeapNode *a, HeapNode *b) {
   b->city->heapNode = a;
   unsigned auxDistance = a->distance;
   int auxYear = a->year;
+  int auxLastYear = a->lastYear;
   City *auxFrom = a->from;
   City *auxCity = a->city;
   a->distance = b->distance;
   a->year = b->year;
   a->city = b->city;
   a->from = b->from;
+  a->lastYear = b->lastYear;
   b->distance = auxDistance;
   b->year = auxYear;
   b->city = auxCity;
   b->from = auxFrom;
+  b->lastYear = auxLastYear;
 }
 
 void heapifyMin(HeapNode *root) {
@@ -135,7 +138,7 @@ void freeMe(Heap *heap, HeapNode *root) {
 HeapNode *minHeap(Heap *heap) {
   HeapNode *last = popEndQueue(heap->last);
   swapInfo(heap->root, last);
-  return last; //freeMe(last) in dijkstra and hipify
+  return last;
 }
 
 void goUp(HeapNode *root) {

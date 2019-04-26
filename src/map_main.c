@@ -14,14 +14,15 @@ int main() {
   Map* m = newMap();
   assert(m);
   assert(addRoad(m, "A", "B", 1, 2020));
-  assert(addRoad(m, "B", "C", 1, 2020));
+  assert(addRoad(m, "B", "C", 1, 2030));
   assert(addRoad(m, "A", "F", 2, 2022));
   assert(addRoad(m, "F", "C", 2, 2022));
   assert(newRoute(m, 1, "A", "C"));
-  freeMap(m);
-  //assert(getRouteDescription(m, 1));
+  assert(repairRoad(m, "B", "A", 2020));
+  deleteMap(m);
+  //deleteMap(m);
   //assert(addRoad(m, "Alinów", "Bór", 1, 2020));
-  //assert(repairRoad(m, "B", "D", 2020));
+
   /*
   assert(addRoad(m, "Alinów", "Bór", 1, 2020));
   assert(addRoad(m, "Bór", "Cielińsk-Niekłańsk", 2, 2020));
