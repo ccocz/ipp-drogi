@@ -4,22 +4,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <pthread.h>
 
 // checkYear
 
+void freeRoutes(Routes *routes) {
+  Routes *help;
+  while (routes) {
+    help = routes;
+    routes = routes->next;
+    free(help);
+  }
+}
+
+void freeEdges(Edges *this) {
+  Edges *edges = this, *helpEdges;
+  while (edges) {
+    helpEdges = edges;
+    edges = edges->next;
+    free(helpEdges);
+  }
+}
+
+void freeRoute(Route *route) {
+  freeEdges(route->edges);
+  free(route);
+}
+
 void freeMap(Map *map) {
   City *aux, *help;
-  Edges *edges, *helpEdges;
   for (int i = 0; i < N; i++) {
     aux = map->cities[i];
     while (aux) {
       help = aux;
-      edges = aux->edges;
-      while (edges) {
-        helpEdges = edges;
-        edges = edges->next;
-        free(helpEdges);
-      }
+      freeEdges(aux->edges);
       free(aux->name);
       aux = aux->next;
       free(help);
@@ -29,18 +47,13 @@ void freeMap(Map *map) {
   for (int i = 0; i < R; i++) {
     route = map->routes[i];
     if (route) {
-      edges = route->edges;
-      while (edges) {
-        helpEdges = edges;
-        edges = edges->next;
-        free(helpEdges);
-      }
-      free(route);
+      freeRoute(route);
     }
   }
   Road *roads = map->roads, *helpRoads;
   while (roads) {
     helpRoads = roads;
+    freeRoutes(roads->routes);
     roads = roads->next;
     free(helpRoads);
   }
@@ -115,6 +128,7 @@ City *addCity(Map *map, const char *city) {
   int hash = hashIt(city);
   City *where = map->cities[hash];
   City *aux = malloc(sizeof(City));
+  aux->allowed = true;
   aux->name = makeCopy(city);
   aux->edges = NULL;
   aux->heapNode = NULL;
@@ -152,6 +166,7 @@ void connectCities(Map *map, City *city1, City *city2,
   aux->length = length;
   aux->year = builtYear;
   aux->next = map->roads;
+  aux->routes = NULL;
   if (map->roads) {
     map->roads->prev = aux;
   }
@@ -228,7 +243,7 @@ void dijkstra(Heap *Q) {
     while (adj) {
       adjRoad = adj->road;
       adjCity = toCity(adjRoad, best->city);
-      if (!adjCity->heapNode->visited) {
+      if (adjCity->allowed && !adjCity->heapNode->visited ) {
         if (best->distance + adjRoad->length < adjCity->heapNode->distance) {
           decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, maxi(best->year, adjRoad->year));
           adjCity->heapNode->from = adjRoad;
@@ -255,7 +270,7 @@ bool checkUnique(City *destination) {
   while (ok && toDest) {
     adjCity = toCity(toDest->road, destination);
     adjRoad = toDest->road;
-    if (adjRoad != destination->heapNode->from &&
+    if (adjRoad != destination->heapNode->from && adjCity->allowed &&
         adjCity->heapNode->distance + adjRoad->length == destination->heapNode->distance &&
         maxi(adjCity->heapNode->year, adjRoad->year) == destination->heapNode->year) {
       ok = false;
@@ -271,26 +286,40 @@ Route *makeRoute(City *source, City *destination) {
   ret->start = source;
   ret->end = destination;
   ret->edges = NULL;
+  ret->totalCost = destination->heapNode->distance;
+  ret->year = destination->heapNode->year;
   City *traverse = destination;
   while (traverse) {
-    puts(traverse->name);
-    edgesHelp = malloc(sizeof(Edges));
-    edgesHelp->road = traverse->heapNode->from;
-    edgesHelp->next = ret->edges;
-    if (ret->edges) {
-      ret->edges->prev = edgesHelp;
-    }
-    ret->edges = edgesHelp;
     if (traverse->heapNode->from) {
+      edgesHelp = malloc(sizeof(Edges));
+      edgesHelp->road = traverse->heapNode->from;
+      edgesHelp->next = ret->edges;
+      if (ret->edges) {
+        ret->edges->prev = edgesHelp;
+      }
+      ret->edges = edgesHelp;
       traverse = toCity(traverse->heapNode->from, traverse);
     } else {
       traverse = NULL;
     }
   }
+  ret->edges->prev = NULL;
   return ret;
 }
 
 void addHeap(Heap *Q, City *source) {
+  Edges *edges;
+  City *adjCity;
+  edges = source->edges;
+  while (edges) {
+    adjCity = toCity(edges->road, source);
+    if (!adjCity->heapNode && adjCity->allowed) {
+      insertHeap(Q, adjCity);
+      addHeap(Q, adjCity);
+    }
+    edges = edges->next;
+  }
+  /*
   Stack *stack = NULL;
   addStack(&stack, source);
   Edges *edges;
@@ -300,37 +329,67 @@ void addHeap(Heap *Q, City *source) {
     edges = source->edges;
     while (edges) {
       adjCity = toCity(edges->road, source);
-      if (!adjCity->heapNode) {
+      if (!adjCity->heapNode && adjCity->allowed) {
         insertHeap(Q, adjCity);
         addStack(&stack, adjCity);
       }
       edges = edges->next;
     }
+  }*/
+}
+
+void freeNodes(Heap *Q, City *source) {
+  Edges *edges;
+  City *adjCity;
+  edges = source->edges;
+  free(source->heapNode);
+  source->heapNode = NULL;
+  while (edges) {
+    adjCity = toCity(edges->road, source);
+    if (adjCity->heapNode) {
+      freeNodes(Q, adjCity);
+    }
+    edges = edges->next;
   }
 }
 
 Route *startDijkstra(Map *map, City *source, City *destination) {
   Heap *Q = newHeap(source);
   addHeap(Q, source);
-  dijkstra(Q);
   bool ok = true;
   Route *ret = NULL;
-  if (!destination->heapNode->from || !checkUnique(destination)) {
+  City *aux;
+  if (destination->heapNode) {
+    dijkstra(Q);
+  }
+  if (!destination->heapNode || !destination->heapNode->from || !checkUnique(destination)) {
     ok = false;
   }
   if (ok) {
     ret = makeRoute(source, destination);
   }
-  City *aux;
-  for (int i = 0; i < N; i++) {
-    aux = map->cities[i];
-    while (aux) {
-      free(aux->heapNode);
-      aux = aux->next;
-    }
-  }
+  freeNodes(Q, source);
   freeHeap(Q);
   return ret;
+}
+
+void giveId(Route *route, unsigned routeId) {
+  City *start = route->start;
+  Edges *edges = route->edges;
+  Routes *aux;
+  while (start) {
+    if (edges) {
+      start = toCity(edges->road, start);
+      aux = malloc(sizeof(Routes));
+      aux->routeId = routeId;
+      aux->next = edges->road->routes;
+      edges->road->routes = aux;
+      edges = edges->next;
+    } else {
+      start = NULL;
+    }
+  }
+
 }
 
 bool newRoute(Map *map, unsigned routeId,
@@ -354,7 +413,185 @@ bool newRoute(Map *map, unsigned routeId,
     return false;
   } else {
     map->routes[routeId] = ans;
+    giveId(ans, routeId);
     return true;
   }
 }
 
+void switchAllowed(Route *route, bool allowed) {
+  City *start = route->start;
+  Edges *edges = route->edges;
+  while (start) {
+    start->allowed = allowed;
+    if (edges) {
+      start = toCity(edges->road, start);
+      edges = edges->next;
+    } else {
+      start = NULL;
+    }
+  }
+}
+
+Route *mergeRoutes(Route *a, Route *b, bool start) {
+  a->totalCost += b->totalCost;
+  a->year = maxi(a->year, b->year);
+  if (start) {
+    Edges *use = b->edges;
+    Edges *help;
+    while (use) {
+      help = use->next;
+      a->edges->prev = use;
+      use->next = a->edges;
+      a->edges = use;
+      use = help;
+    }
+    a->edges->prev = NULL;
+    a->start = b->end;
+    free(b);
+    return a;
+  } else {
+    Edges *find = a->edges;
+    while (find->next) {
+      find = find->next;
+    }
+    Edges *use = b->edges;
+    while (use) {
+      find->next = use;
+      use->prev = find;
+      find = use;
+      use = use->next;
+    }
+    find->next = NULL;
+    a->end = b->end;
+    free(b);
+  }
+}
+
+bool extendRoute(Map *map, unsigned routeId, const char *city) {
+  if (badName(city)) {
+    return false;
+  }
+  if (!map->routes[routeId]) {
+    return false;
+  }
+  City *first = cityExists(map, city);
+  if (!first) {
+    return false;
+  }
+  Route *my = map->routes[routeId];
+  switchAllowed(map->routes[routeId], false);
+  if (!first->allowed) {
+    switchAllowed(my, true);
+    return false;
+  }
+  Route *fromHead = startDijkstra(map, my->start, first);
+  Route *fromTail = startDijkstra(map, my->end, first);
+  switchAllowed(my, true);
+  if (fromHead->totalCost < fromTail->totalCost) {
+    map->routes[routeId] = mergeRoutes(my, fromHead, true);
+    freeRoute(fromTail);
+  } else if (fromHead->totalCost > fromTail->totalCost) {
+    map->routes[routeId] = mergeRoutes(my, fromTail, false);
+    freeRoute(fromHead);
+  } else {
+    if (fromHead->totalCost == fromTail->totalCost && fromHead->year > fromTail->year) {
+      map->routes[routeId] = mergeRoutes(my, fromHead, true);
+      freeRoute(fromTail);
+    } else if (fromHead->totalCost == fromTail->totalCost && fromHead->year < fromTail->year) {
+      map->routes[routeId] = mergeRoutes(my, fromTail, false);
+      freeRoute(fromHead);
+    } else {
+      freeRoute(fromHead);
+      freeRoute(fromTail);
+      return false;
+    }
+  }
+  return true;
+}
+
+void deleteEdge(City *city, Road *road) {
+  Edges *edges = city->edges;
+  bool found = false;
+  while (edges && !found) {
+    if (edges->road == road) {
+      if (edges->prev) {
+        edges->prev->next = edges->next;
+      }
+      else {
+        city->edges = edges->next;
+      }
+      free(edges);
+      found = true;
+    }
+    edges = edges->next;
+  }
+}
+
+void changeRoute(Route *route, Route *with, Road *road) {
+  bool found = false;
+  Edges *edges = route->edges;
+  while (edges && !found) {
+    if (edges->road == road) {
+      if (edges->prev) {
+        edges->prev->next = with->edges;
+      } else {
+        route->edges = with->edges;
+      }
+      free(edges);
+      found = true;
+    }
+    edges = edges->next;
+  }
+}
+
+void deleteRoad(Map *map, Road *road) {
+  if (road->prev) {
+    road->prev = road->next;
+  } else {
+    map->roads = road->next;
+  }
+  free(road);
+}
+
+bool removeRoad(Map *map, const char *city1, const char *city2) {
+  if (badName(city1) || badName(city2)) {
+    return false;
+  }
+  City *first = cityExists(map, city1);
+  City *second = cityExists(map, city2);
+  if (!first || !second) {
+    return false;
+  }
+  Road *connects = isConnected(first, second);
+  if (!connects) {
+    return false;
+  }
+  puts(connects->from->name);
+  puts(connects->to->name);
+  Routes *use = connects->routes;
+  while (use) {
+    switchAllowed(map->routes[use->routeId], false);
+    use = use->next;
+  }
+  Route *new = startDijkstra(map, first, second);
+  if (new == NULL) {
+    use = connects->routes;
+    while (use) {
+      switchAllowed(map->routes[use->routeId], true);
+      use = use->next;
+    }
+    free(new);
+    return false;
+  }
+  use = connects->routes;
+  while (use) {
+    switchAllowed(map->routes[use->routeId], true);
+    changeRoute(map->routes[use->routeId], new, connects);
+    use = use->next;
+  }
+  deleteEdge(first, connects);
+  deleteEdge(second, connects);
+  deleteRoad(map, connects);
+  free(new);
+  return true;
+}

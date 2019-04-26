@@ -20,10 +20,12 @@ typedef struct City City;
 typedef struct HeapNode HeapNode;
 typedef struct Route Route;
 typedef struct Edges Edges;
+typedef struct Routes Routes;
 
 struct City {
   char *name;
   City *next;
+  bool allowed;
   HeapNode *heapNode;
   Edges *edges;
 };
@@ -33,8 +35,14 @@ struct Road {
   City *to;
   unsigned length;
   int year;
+  Routes *routes;
   Road *next;
   Road *prev;
+};
+
+struct Routes {
+  unsigned routeId;
+  Routes *next;
 };
 
 struct Edges{
@@ -46,6 +54,8 @@ struct Edges{
 struct Route {
   City *start;
   City *end;
+  unsigned totalCost;
+  int year;
   Edges *edges;
 };
 

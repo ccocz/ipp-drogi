@@ -35,4 +35,4 @@ void freeMe(Heap *heap, HeapNode *root);
 void heapifyMin(HeapNode *root);
 void freeHeap(Heap *heap);
 
-#endif //DROGI_HEAP_H
+#endif

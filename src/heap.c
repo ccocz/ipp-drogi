@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// inline inline
-
 typedef struct HeapNode HeapNode;
 
 Heap *newHeap(City *root) {
