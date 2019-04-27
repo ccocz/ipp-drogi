@@ -1,6 +1,5 @@
 #include "map.h"
 #include "heap.h"
-#include "stack.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -155,6 +154,7 @@ void addEdge(City *city, Road *road) {
   if (city->edges) {
     city->edges->prev = help;
   }
+  help->prev = NULL;
   city->edges = help;
 }
 
@@ -167,6 +167,7 @@ void connectCities(Map *map, City *city1, City *city2,
   aux->year = builtYear;
   aux->next = map->roads;
   aux->routes = NULL;
+  aux->prev = NULL;
   if (map->roads) {
     map->roads->prev = aux;
   }
@@ -183,14 +184,15 @@ bool addRoad(Map *map, const char *city1, const char *city2,
   if (!strcmp(city1, city2)) {
     return false;
   }
-  City *first, *second;
-  if (!(first = cityExists(map, city1))) {
+  City *first = cityExists(map, city1), *second = cityExists(map, city2);
+  if (!first) {
     first = addCity(map, city1);
   }
-  if (!(second = cityExists(map, city2))) {
+  if (!second) {
     second = addCity(map, city2);
   }
-  if (isConnected(first, second)) {
+  Road *road = isConnected(first, second);
+  if (road) {
     return false;
   }
   connectCities(map, first, second, length, builtYear);
@@ -353,12 +355,11 @@ void freeNodes(Heap *Q, City *source) {
   }
 }
 
-Route *startDijkstra(Map *map, City *source, City *destination) {
+Route *startDijkstra(City *source, City *destination) {
   Heap *Q = newHeap(source);
   addHeap(Q, source);
   bool ok = true;
   Route *ret = NULL;
-  City *aux;
   if (destination->heapNode) {
     dijkstra(Q);
   }
@@ -373,6 +374,17 @@ Route *startDijkstra(Map *map, City *source, City *destination) {
   return ret;
 }
 
+bool existId(Road *road, unsigned id) {
+  Routes *routes = road->routes;
+  while (routes) {
+    if (routes->routeId == id) {
+      return true;
+    }
+    routes = routes->next;
+  }
+  return false;
+}
+
 void giveId(Route *route, unsigned routeId) {
   City *start = route->start;
   Edges *edges = route->edges;
@@ -380,16 +392,17 @@ void giveId(Route *route, unsigned routeId) {
   while (start) {
     if (edges) {
       start = toCity(edges->road, start);
-      aux = malloc(sizeof(Routes));
-      aux->routeId = routeId;
-      aux->next = edges->road->routes;
-      edges->road->routes = aux;
+      if (!existId(edges->road, routeId)) {
+        aux = malloc(sizeof(Routes));
+        aux->routeId = routeId;
+        aux->next = edges->road->routes;
+        edges->road->routes = aux;
+      }
       edges = edges->next;
     } else {
       start = NULL;
     }
   }
-
 }
 
 bool newRoute(Map *map, unsigned routeId,
@@ -408,7 +421,7 @@ bool newRoute(Map *map, unsigned routeId,
   if (!first || !second) {
     return false;
   }
-  Route *ans = startDijkstra(map, first, second);
+  Route *ans = startDijkstra(first, second);
   if (!ans) {
     return false;
   } else {
@@ -447,8 +460,6 @@ Route *mergeRoutes(Route *a, Route *b, bool start) {
     }
     a->edges->prev = NULL;
     a->start = b->end;
-    free(b);
-    return a;
   } else {
     Edges *find = a->edges;
     while (find->next) {
@@ -463,8 +474,9 @@ Route *mergeRoutes(Route *a, Route *b, bool start) {
     }
     find->next = NULL;
     a->end = b->end;
-    free(b);
   }
+  free(b);
+  return a;
 }
 
 bool extendRoute(Map *map, unsigned routeId, const char *city) {
@@ -484,8 +496,8 @@ bool extendRoute(Map *map, unsigned routeId, const char *city) {
     switchAllowed(my, true);
     return false;
   }
-  Route *fromHead = startDijkstra(map, my->start, first);
-  Route *fromTail = startDijkstra(map, my->end, first);
+  Route *fromHead = startDijkstra(my->start, first);
+  Route *fromTail = startDijkstra(my->end, first);
   switchAllowed(my, true);
   if (fromHead->totalCost < fromTail->totalCost) {
     map->routes[routeId] = mergeRoutes(my, fromHead, true);
@@ -506,6 +518,7 @@ bool extendRoute(Map *map, unsigned routeId, const char *city) {
       return false;
     }
   }
+  giveId(map->routes[routeId], routeId);
   return true;
 }
 
@@ -550,6 +563,7 @@ void deleteRoad(Map *map, Road *road) {
   } else {
     map->roads = road->next;
   }
+  freeRoutes(road->routes);
   free(road);
 }
 
@@ -566,32 +580,98 @@ bool removeRoad(Map *map, const char *city1, const char *city2) {
   if (!connects) {
     return false;
   }
-  puts(connects->from->name);
-  puts(connects->to->name);
   Routes *use = connects->routes;
   while (use) {
     switchAllowed(map->routes[use->routeId], false);
     use = use->next;
   }
-  Route *new = startDijkstra(map, first, second);
+  Route *new = startDijkstra(first, second);
   if (new == NULL) {
     use = connects->routes;
     while (use) {
       switchAllowed(map->routes[use->routeId], true);
       use = use->next;
     }
-    free(new);
+    freeRoute(new);
     return false;
   }
   use = connects->routes;
   while (use) {
     switchAllowed(map->routes[use->routeId], true);
     changeRoute(map->routes[use->routeId], new, connects);
+    giveId(map->routes[use->routeId], use->routeId);
     use = use->next;
   }
   deleteEdge(first, connects);
   deleteEdge(second, connects);
   deleteRoad(map, connects);
-  free(new);
+  freeRoute(new);
   return true;
+}
+
+size_t intLen(int x) {
+  if (x < 0) {
+    x *= -1;
+    size_t ret = 0;
+    while (x) {
+      ret++;
+      x /= 10;
+    }
+    ret++;
+    return ret;
+  } else {
+    size_t ret = 0;
+    while (x) {
+      ret++;
+      x /= 10;
+    }
+    return ret;
+  }
+}
+
+size_t findSize(Route *route, unsigned routeId) {
+  size_t ret = intLen(routeId) + 1;
+  ret += strlen(route->start->name) + 1;
+  City *start = route->start;
+  Edges *edges = route->edges;
+  while (start) {
+    if (edges) {
+      start = toCity(edges->road, start);
+      ret += strlen(start->name) + 1;
+      ret += intLen(edges->road->year) + 1;
+      ret += intLen(edges->road->length) + 1;
+      edges = edges->next;
+    } else {
+      start = NULL;
+    }
+  }
+  return ret - 1;
+}
+
+char const* getRouteDescription(Map *map, unsigned routeId) {
+  if (!map->routes[routeId]) {
+    return "";
+  }
+  Route *route = map->routes[routeId];
+  char *ret = calloc(findSize(route, routeId) + N, sizeof(char));
+  sprintf(&ret[strlen(ret)], "%u%c", routeId, ';');
+  City *start = route->start;
+  Edges *edges = route->edges;
+  sprintf(&ret[strlen(ret)], "%s%c", route->start->name, ';');
+  while (start) {
+    if (edges) {
+      start = toCity(edges->road, start);
+      sprintf(&ret[strlen(ret)], "%u%c", edges->road->length, ';');
+      sprintf(&ret[strlen(ret)], "%d%c", edges->road->year, ';');
+      edges = edges->next;
+      if (edges) {
+        sprintf(&ret[strlen(ret)], "%s%c", start->name, ';');
+      } else {
+        sprintf(&ret[strlen(ret)], "%s", start->name);
+      }
+    } else {
+      start = NULL;
+    }
+  }
+  return ret;
 }

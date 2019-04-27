@@ -28,8 +28,7 @@ set(SOURCE_FILES
     src/heap.h
     src/queue.h
     src/map_main.c
-    src/stack.h
-    src/stack.c)
+        )
 
 # Wskazujemy plik wykonywalny.
 add_executable(map ${SOURCE_FILES})
