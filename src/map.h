@@ -10,6 +10,7 @@
 #define __MAP_H__
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "heap.h"
 
 #define N 7213
@@ -54,7 +55,7 @@ struct Edges{
 struct Route {
   City *start;
   City *end;
-  unsigned totalCost;
+  uint64_t totalCost;
   int year;
   Edges *edges;
 };
@@ -190,6 +191,5 @@ bool removeRoad(Map *map, const char *city1, const char *city2);
  * @return Wskaźnik na napis lub NULL, gdy nie udało się zaalokować pamięci.
  */
 char const* getRouteDescription(Map *map, unsigned routeId);
-void getRouteDescription2(Map *map, unsigned routeId);
 
 #endif /* __MAP_H__ */

@@ -21,7 +21,7 @@ struct Queue{
 Queue *newQueue(void);
 void pushQueue(Queue *queue, HeapNode *node);
 void popQueue(Queue *queue);
-HeapNode *topQueue(Queue *queue);
+QueueNode *topQueue(Queue *queue);
 bool isEmpty(Queue *queue);
 HeapNode *popEndQueue(Queue *queue);
 void freeQueue(Queue *queue);

@@ -15,7 +15,7 @@ struct HeapNode{
   Road *from;
   bool visited;
   int lastYear;
-  unsigned distance;
+  uint64_t distance;
   int year;
   struct HeapNode *parent;
   struct HeapNode *left;
@@ -30,7 +30,7 @@ struct Heap{
 Heap *newHeap(City *root);
 void insertHeap(Heap *heap, struct City *city);
 HeapNode *minHeap(Heap *heap);
-void decreaseValue(HeapNode *node, unsigned dist, int year);
+void decreaseValue(HeapNode *node, uint64_t dist, int year);
 void freeMe(Heap *heap, HeapNode *root);
 void heapifyMin(HeapNode *root);
 void freeHeap(Heap *heap);

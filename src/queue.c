@@ -1,6 +1,7 @@
 #include "queue.h"
 #include "heap.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 Queue *newQueue(void) {
   Queue *aux = malloc(sizeof(Queue));
@@ -33,7 +34,7 @@ void popQueue(Queue *queue) {
   queue->head = queue->head->next;
 }
 
-HeapNode *topQueue(Queue *queue) {
+QueueNode *topQueue(Queue *queue) {
   if (isEmpty(queue)) {
     return NULL;
   }
@@ -44,6 +45,9 @@ HeapNode *popEndQueue(Queue *queue) {
   HeapNode *aux = queue->tail->node;
   QueueNode *tbfreed = queue->tail;
   queue->tail = queue->tail->prev;
+  if (queue->tail) {
+    queue->tail->next = NULL;
+  }
   free(tbfreed);
   return aux;
 }
