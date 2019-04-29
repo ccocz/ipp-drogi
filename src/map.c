@@ -249,7 +249,7 @@ City *toCity(Road *road, City *from) {
   }
 }
 
-void dijkstra(Heap *Q) {
+void dijkstra(Heap *Q, Road *banned) {
   HeapNode *best;
   Edges *adj;
   Road *adjRoad;
@@ -260,7 +260,7 @@ void dijkstra(Heap *Q) {
     while (adj) {
       adjRoad = adj->road;
       adjCity = toCity(adjRoad, best->city);
-      if (adjCity->allowed && !adjCity->heapNode->visited ) {
+      if (adjRoad != banned && adjCity->allowed && !adjCity->heapNode->visited ) {
         if (best->distance + adjRoad->length < adjCity->heapNode->distance) {
           decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, getMini(best->year, adjRoad->year));
           adjCity->heapNode->from = adjRoad;
@@ -278,7 +278,7 @@ void dijkstra(Heap *Q) {
   }
 }
 
-bool checkUnique(City *destination) {
+bool checkUnique(City *destination, Road *banned) {
   Road *adjRoad;
   City *adjCity;
   Edges *toDest = destination->edges;
@@ -286,7 +286,7 @@ bool checkUnique(City *destination) {
   while (ok && toDest) {
     adjCity = toCity(toDest->road, destination);
     adjRoad = toDest->road;
-    if (adjRoad != destination->heapNode->from && adjCity->allowed &&
+    if (adjRoad != banned && adjRoad != destination->heapNode->from && adjCity->allowed &&
         adjCity->heapNode->distance + adjRoad->length == destination->heapNode->distance &&
         getMini(adjCity->heapNode->year, adjRoad->year) == destination->heapNode->year) {
       ok = false;
@@ -323,38 +323,21 @@ Route *makeRoute(City *source, City *destination) {
   return ret;
 }
 
-void addHeap(Heap *Q, City *source) {
+void addHeap(Heap *Q, City *source, Road *banned) {
   Edges *edges;
   City *adjCity;
   edges = source->edges;
   while (edges) {
     adjCity = toCity(edges->road, source);
-    if (!adjCity->heapNode && adjCity->allowed) {
+    if (edges->road != banned && !adjCity->heapNode && adjCity->allowed) {
       insertHeap(Q, adjCity);
-      addHeap(Q, adjCity);
+      addHeap(Q, adjCity, banned);
     }
     edges = edges->next;
   }
-  /*
-  Stack *stack = NULL;
-  addStack(&stack, source);
-  Edges *edges;
-  City *adjCity;
-  while (!isEmptyStack(stack)) {
-    source = popStack(&stack);
-    edges = source->edges;
-    while (edges) {
-      adjCity = toCity(edges->road, source);
-      if (!adjCity->heapNode && adjCity->allowed) {
-        insertHeap(Q, adjCity);
-        addStack(&stack, adjCity);
-      }
-      edges = edges->next;
-    }
-  }*/
 }
 
-void freeNodes(Heap *Q, City *source) {
+void freeNodes(Heap *Q, City *source, Road *banned) {
   Edges *edges;
   City *adjCity;
   edges = source->edges;
@@ -362,28 +345,34 @@ void freeNodes(Heap *Q, City *source) {
   source->heapNode = NULL;
   while (edges) {
     adjCity = toCity(edges->road, source);
-    if (adjCity->heapNode) {
-      freeNodes(Q, adjCity);
+    if (edges->road != banned && adjCity->heapNode) {
+      freeNodes(Q, adjCity, banned);
     }
     edges = edges->next;
   }
 }
 
-Route *startDijkstra(City *source, City *destination) {
+Route *startDijkstra(City *source, City *destination, Road *banned, bool *noWay) {
   Heap *Q = newHeap(source);
-  addHeap(Q, source);
+  addHeap(Q, source, banned);
   bool ok = true;
   Route *ret = NULL;
   if (destination->heapNode) {
-    dijkstra(Q);
+    dijkstra(Q, banned);
   }
-  if (!destination->heapNode || !destination->heapNode->from || !checkUnique(destination)) {
+  if (!destination->heapNode) {
+    if (noWay) {
+      (*noWay) = true;
+    }
+    ok = false;
+  }
+  if (destination->heapNode && !checkUnique(destination, banned)) {
     ok = false;
   }
   if (ok) {
     ret = makeRoute(source, destination);
   }
-  freeNodes(Q, source);
+  freeNodes(Q, source, banned);
   freeHeap(Q);
   return ret;
 }
@@ -400,28 +389,26 @@ bool existId(Road *road, unsigned id) {
 }
 
 void giveId(Route *route, unsigned routeId) {
-  City *start = route->start;
   Edges *edges = route->edges;
   Routes *aux;
-  while (start) {
-    if (edges) {
-      start = toCity(edges->road, start);
-      if (!existId(edges->road, routeId)) {
-        aux = malloc(sizeof(Routes));
-        aux->routeId = routeId;
-        aux->next = edges->road->routes;
-        edges->road->routes = aux;
+  while (edges) {
+    if (!existId(edges->road, routeId)) {
+      aux = malloc(sizeof(Routes));
+      aux->routeId = routeId;
+      aux->next = edges->road->routes;
+      aux->prev = NULL;
+      if (aux->next) {
+        aux->next->prev = aux;
       }
-      edges = edges->next;
-    } else {
-      start = NULL;
+      edges->road->routes = aux;
     }
+    edges = edges->next;
   }
 }
 
 bool newRoute(Map *map, unsigned routeId,
               const char *city1, const char *city2) {
-  if (routeId > 999 || badName(city1) || badName(city2)) {
+  if (routeId > 999 || routeId <= 0 || badName(city1) || badName(city2)) {
     return false;
   }
   if (map->routes[routeId]) {
@@ -435,7 +422,7 @@ bool newRoute(Map *map, unsigned routeId,
   if (!first || !second) {
     return false;
   }
-  Route *ans = startDijkstra(first, second);
+  Route *ans = startDijkstra(first, second, NULL, NULL);
   if (!ans) {
     return false;
   } else {
@@ -460,8 +447,6 @@ void switchAllowed(Route *route, bool allowed) {
 }
 
 Route *mergeRoutes(Route *a, Route *b, bool start) {
-  a->totalCost += b->totalCost;
-  a->year = getMini(a->year, b->year);
   if (start) {
     Edges *use = b->edges;
     Edges *help;
@@ -479,8 +464,7 @@ Route *mergeRoutes(Route *a, Route *b, bool start) {
     while (find->next) {
       find = find->next;
     }
-    Edges *use = b->edges;
-    use->prev = a->edges;
+    b->edges->prev = find;
     find->next = b->edges;
     a->end = b->end;
   }
@@ -505,8 +489,11 @@ bool extendRoute(Map *map, unsigned routeId, const char *city) {
     switchAllowed(my, true);
     return false;
   }
-  Route *fromHead = startDijkstra(my->start, first);
-  Route *fromTail = startDijkstra(my->end, first);
+  my->start->allowed = true;
+  Route *fromHead = startDijkstra(my->start, first, NULL, NULL);
+  my->start->allowed = false;
+  my->end->allowed = true;
+  Route *fromTail = startDijkstra(my->end, first, NULL, NULL);
   switchAllowed(my, true);
   if (!fromHead && !fromTail) {
     return false;
@@ -568,30 +555,55 @@ void deleteEdge(City *city, Road *road) {
   }
 }
 
-void changeRoute(Route *route, Route *with, Road *road) {
+void changeRoute(Route *route, Route *with, Road *road, City *from) {
   bool found = false;
   Edges *edges = route->edges;
+  Edges *use, *help, *last;
   Edges *lastWith = with->edges;
+  City *start = route->start;
   while (lastWith->next) {
     lastWith = lastWith->next;
   }
   while (!found && edges) {
     if (edges->road == road) {
-      if (edges->prev) {
-        edges->prev->next = with->edges;
-        with->edges->prev = edges->prev;
+      if (start == from) {
+        if (edges->prev) {
+          edges->prev->next = with->edges;
+          with->edges->prev = edges->prev;
+        } else {
+          route->edges = with->edges;
+          with->edges->prev = NULL;
+        }
+        lastWith->next = edges->next;
+        if (edges->next) {
+          edges->next->prev = lastWith;
+        }
       } else {
-        route->edges = with->edges;
-        with->edges->prev = NULL;
-      }
-      lastWith->next = edges->next;
-      if (edges->next) {
-        edges->next->prev = lastWith;
+        use = with->edges;
+        last = edges->next;
+        while (use) {
+          help = use->next;
+          use->next = last;
+          use->prev = help;
+          last = use;
+          use = help;
+        }
+        if (edges->prev) {
+          edges->prev->next = lastWith;
+          lastWith->prev = edges->prev;
+        } else {
+          route->edges = lastWith;
+          lastWith->prev = NULL;
+        }
+        if (edges->next) {
+          edges->next->prev = with->edges;
+        }
       }
       free(edges);
       found = true;
     }
     if (!found) {
+      start = toCity(edges->road, start);
       edges = edges->next;
     }
   }
@@ -615,6 +627,28 @@ void deleteRoad(Map *map, Road *road) {
   free(road);
 }
 
+void cancelRoute(Road *road, unsigned routeId) {
+  Routes *routes = road->routes;
+  bool found = false;
+  while (!found && routes) {
+    if (routes->routeId == routeId) {
+      if (routes->prev) {
+        routes->prev->next = routes->next;
+      } else {
+        road->routes = routes->next;
+      }
+      if (routes->next) {
+        routes->next->prev = routes->prev;
+      }
+      free(routes);
+      found = true;
+    }
+    if (!found) {
+      routes = routes->next;
+    }
+  }
+}
+
 bool removeRoad(Map *map, const char *city1, const char *city2) {
   if (badName(city1) || badName(city2)) {
     return false;
@@ -634,31 +668,59 @@ bool removeRoad(Map *map, const char *city1, const char *city2) {
     deleteRoad(map, connects);
     return true;
   }
-  Routes *use = connects->routes;
-  while (use) {
-    switchAllowed(map->routes[use->routeId], false);
-    use = use->next;
-  }
-  Route *new = startDijkstra(first, second);
-  if (new == NULL) {
-    use = connects->routes;
-    while (use) {
-      switchAllowed(map->routes[use->routeId], true);
-      use = use->next;
-    }
-    return false;
-  }
+  Routes *use;
+  Route *new = NULL;
+  bool noWay;
   use = connects->routes;
   while (use) {
-    changeRoute(map->routes[use->routeId], new, connects);
-    giveId(map->routes[use->routeId], use->routeId);
+    switchAllowed(map->routes[use->routeId], false);
+    first->allowed = second->allowed = true;
+    noWay = false;
+    new = startDijkstra(first, second, connects, &noWay);
     switchAllowed(map->routes[use->routeId], true);
+    if (!new) {
+      return false;
+    }
+    if (new) {
+      freeRoute(new);
+    }
     use = use->next;
+  }
+  use = connects->routes;
+  Edges *edges;
+  unsigned help;
+  while (use) {
+    switchAllowed(map->routes[use->routeId], false);
+    first->allowed = second->allowed = true;
+    noWay = false;
+    new = startDijkstra(first, second, connects, &noWay);
+//    if (noWay) {
+//      edges = map->routes[use->routeId]->edges;
+//      while (edges) {
+//        if (edges->road != connects) {
+//          cancelRoute(edges->road, use->routeId);
+//        }
+//        edges = edges->next;
+//      }
+//      switchAllowed(map->routes[use->routeId], true);
+//      freeRoute(map->routes[use->routeId]);
+//      map->routes[use->routeId] = NULL;
+//    }
+//    else {
+      changeRoute(map->routes[use->routeId], new, connects, first);
+      switchAllowed(map->routes[use->routeId], true);
+      giveId(map->routes[use->routeId], use->routeId);
+      free(new);
+//    }
+//    if (noWay) {
+//      help = use->routeId;
+//      use = use->next;
+//      cancelRoute(connects, help);
+//    }
   }
   deleteEdge(first, connects);
   deleteEdge(second, connects);
   deleteRoad(map, connects);
-  free(new);
   return true;
 }
 

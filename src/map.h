@@ -44,6 +44,7 @@ struct Road {
 struct Routes {
   unsigned routeId;
   Routes *next;
+  Routes *prev;
 };
 
 struct Edges{
