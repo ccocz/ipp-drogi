@@ -14,7 +14,6 @@ struct HeapNode{
   City *city;
   Road *from;
   bool visited;
-  int lastYear;
   uint64_t distance;
   int year;
   struct HeapNode *parent;

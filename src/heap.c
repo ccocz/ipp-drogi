@@ -57,19 +57,16 @@ void insertHeap(Heap *heap, City *city) {
 void swapInfo(HeapNode *a, HeapNode *b) {
   uint64_t auxDistance = a->distance;
   int auxYear = a->year;
-  int auxLastYear = a->lastYear;
   Road *auxFrom = a->from;
   City *auxCity = a->city;
   a->distance = b->distance;
   a->year = b->year;
   a->city = b->city;
   a->from = b->from;
-  a->lastYear = b->lastYear;
   b->distance = auxDistance;
   b->year = auxYear;
   b->city = auxCity;
   b->from = auxFrom;
-  b->lastYear = auxLastYear;
   a->city->heapNode = a;
   b->city->heapNode = b;
 }

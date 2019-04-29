@@ -271,12 +271,10 @@ void dijkstra(Heap *Q, Road *banned) {
         if (best->distance + adjRoad->length < adjCity->heapNode->distance) {
           decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, getMini(best->year, adjRoad->year));
           adjCity->heapNode->from = adjRoad;
-          adjCity->heapNode->lastYear = adjRoad->year;
         } else if (best->distance + adjRoad->length == adjCity->heapNode->distance) {
           if (maxi(getMini(best->year, adjRoad->year), adjCity->heapNode->year)) {
             decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, getMini(best->year, adjRoad->year));
             adjCity->heapNode->from = adjRoad;
-            adjCity->heapNode->lastYear = adjRoad->year;
           }
         }
       }
@@ -285,22 +283,40 @@ void dijkstra(Heap *Q, Road *banned) {
   }
 }
 
-bool checkUnique(City *destination, Road *banned) {
-  Road *adjRoad;
-  City *adjCity;
-  Edges *toDest = destination->edges;
-  bool ok = true;
-  while (ok && toDest) {
-    adjCity = toCity(toDest->road, destination);
-    adjRoad = toDest->road;
-    if (adjRoad != banned && adjRoad != destination->heapNode->from && adjCity->allowed &&
-        adjCity->heapNode->distance + adjRoad->length == destination->heapNode->distance &&
-        getMini(adjCity->heapNode->year, adjRoad->year) == destination->heapNode->year) {
-      ok = false;
+bool checkUnique(Route *route, Road *banned) {
+  City *start = route->start;
+  City *helpCity;
+  City *nextCity;
+  City *prevCity = NULL;
+  Edges *edges = route->edges;
+  Edges *helpEdges;
+  while (start) {
+    if (edges) {
+      nextCity = toCity(edges->road, start);
+    } else {
+      nextCity = NULL;
     }
-    toDest = toDest->next;
+    helpEdges = start->edges;
+    while (helpEdges) {
+      helpCity = toCity(helpEdges->road, start);
+      if (helpEdges->road != banned && helpCity->allowed && helpCity->heapNode && helpCity != nextCity &&
+          helpCity != prevCity) {
+        if (helpCity->heapNode->distance + helpEdges->road->length == start->heapNode->distance &&
+            getMini(helpCity->heapNode->year, helpEdges->road->year) == start->heapNode->year) {
+          return false;
+        }
+      }
+      helpEdges = helpEdges->next;
+    }
+    if (edges) {
+      prevCity = start;
+      start = toCity(edges->road, start);
+      edges = edges->next;
+    } else {
+      start = NULL;
+    }
   }
-  return ok;
+  return true;
 }
 
 Route *makeRoute(City *source, City *destination) {
@@ -367,11 +383,15 @@ Route *startDijkstra(City *source, City *destination, Road *banned) {
   if (destination->heapNode) {
     dijkstra(Q, banned);
   }
-  if (!destination->heapNode || !checkUnique(destination, banned)) {
+  if (!destination->heapNode) {
     ok = false;
   }
   if (ok) {
     ret = makeRoute(source, destination);
+  }
+  if (ok && !checkUnique(ret, banned)) {
+    freeRoute(ret);
+    ret = NULL;
   }
   freeNodes(Q, source, banned);
   freeHeap(Q);
