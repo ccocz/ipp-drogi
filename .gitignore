@@ -1,3 +1,4 @@
+.idea
 CMakeFiles
 html
 CMakeCache.txt
@@ -8,4 +9,3 @@ Doxyfile
 Drogi.cbp
 Makefile
 map
-.idea
