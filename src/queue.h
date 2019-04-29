@@ -26,4 +26,4 @@ bool isEmpty(Queue *queue);
 HeapNode *popEndQueue(Queue *queue);
 void freeQueue(Queue *queue);
 
-#endif //DROGI_QUEUE_H
+#endif

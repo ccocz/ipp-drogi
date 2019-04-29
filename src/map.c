@@ -3,9 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <pthread.h>
-
-//check allocation
 
 void freeRoutes(Routes *routes) {
   Routes *help;
