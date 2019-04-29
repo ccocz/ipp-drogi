@@ -89,13 +89,20 @@ bool badName(const char *city) {
   return false;
 }
 
+int MOD(size_t x, int mod) {
+  while (x > 0) {
+    x += mod;
+  }
+  return x;
+}
+
 int hashIt(const char *s) {
   size_t n = strlen(s);
   int mod = N;
   int base = 1453;
   int hash = 0;
   for (size_t i = 0; i < n; i++) {
-    hash = (hash + (((s[i] % mod) * base) % mod)) % mod;
+    hash = (hash + (((MOD(s[i], mod) % mod) * base) % mod)) % mod;
     base = (base * 1453) % mod;
   }
   return hash;
@@ -703,7 +710,7 @@ size_t findSize(Route *route, unsigned routeId) {
       start = NULL;
     }
   }
-  return ret - 1;
+  return ret;
 }
 
 char const* getRouteDescription(Map *map, unsigned routeId) {
@@ -713,7 +720,7 @@ char const* getRouteDescription(Map *map, unsigned routeId) {
     return x;
   }
   Route *route = map->routes[routeId];
-  char *ret = calloc(findSize(route, routeId) * 2, sizeof(char));
+  char *ret = calloc(findSize(route, routeId), sizeof(char));
   sprintf(&ret[strlen(ret)], "%u%c", routeId, ';');
   City *start = route->start;
   Edges *edges = route->edges;
