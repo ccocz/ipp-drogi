@@ -223,16 +223,16 @@ bool repairRoad(Map *map, const char *city1,
   return true;
 }
 
-inline bool maxi(int x, int y) {
+bool maxi(int x, int y) {
   if (x < 0 && y < 0) {
-    return x < y;
+    return x <= y;
   }
   else {
-    return x > y;
+    return x >= y;
   }
 }
 
-inline int getMini(int x, int y) {
+int getMini(int x, int y) {
   if (x < 0 && y < 0) {
     return x > y ? x : y;
   }
@@ -352,7 +352,7 @@ void freeNodes(Heap *Q, City *source, Road *banned) {
   }
 }
 
-Route *startDijkstra(City *source, City *destination, Road *banned, bool *noWay) {
+Route *startDijkstra(City *source, City *destination, Road *banned) {
   Heap *Q = newHeap(source);
   addHeap(Q, source, banned);
   bool ok = true;
@@ -360,13 +360,7 @@ Route *startDijkstra(City *source, City *destination, Road *banned, bool *noWay)
   if (destination->heapNode) {
     dijkstra(Q, banned);
   }
-  if (!destination->heapNode) {
-    if (noWay) {
-      (*noWay) = true;
-    }
-    ok = false;
-  }
-  if (destination->heapNode && !checkUnique(destination, banned)) {
+  if (!destination->heapNode || !checkUnique(destination, banned)) {
     ok = false;
   }
   if (ok) {
@@ -396,10 +390,6 @@ void giveId(Route *route, unsigned routeId) {
       aux = malloc(sizeof(Routes));
       aux->routeId = routeId;
       aux->next = edges->road->routes;
-      aux->prev = NULL;
-      if (aux->next) {
-        aux->next->prev = aux;
-      }
       edges->road->routes = aux;
     }
     edges = edges->next;
@@ -422,7 +412,7 @@ bool newRoute(Map *map, unsigned routeId,
   if (!first || !second) {
     return false;
   }
-  Route *ans = startDijkstra(first, second, NULL, NULL);
+  Route *ans = startDijkstra(first, second, NULL);
   if (!ans) {
     return false;
   } else {
@@ -490,10 +480,10 @@ bool extendRoute(Map *map, unsigned routeId, const char *city) {
     return false;
   }
   my->start->allowed = true;
-  Route *fromHead = startDijkstra(my->start, first, NULL, NULL);
+  Route *fromHead = startDijkstra(my->start, first, NULL);
   my->start->allowed = false;
   my->end->allowed = true;
-  Route *fromTail = startDijkstra(my->end, first, NULL, NULL);
+  Route *fromTail = startDijkstra(my->end, first, NULL);
   switchAllowed(my, true);
   if (!fromHead && !fromTail) {
     return false;
@@ -627,28 +617,6 @@ void deleteRoad(Map *map, Road *road) {
   free(road);
 }
 
-void cancelRoute(Road *road, unsigned routeId) {
-  Routes *routes = road->routes;
-  bool found = false;
-  while (!found && routes) {
-    if (routes->routeId == routeId) {
-      if (routes->prev) {
-        routes->prev->next = routes->next;
-      } else {
-        road->routes = routes->next;
-      }
-      if (routes->next) {
-        routes->next->prev = routes->prev;
-      }
-      free(routes);
-      found = true;
-    }
-    if (!found) {
-      routes = routes->next;
-    }
-  }
-}
-
 bool removeRoad(Map *map, const char *city1, const char *city2) {
   if (badName(city1) || badName(city2)) {
     return false;
@@ -670,53 +638,28 @@ bool removeRoad(Map *map, const char *city1, const char *city2) {
   }
   Routes *use;
   Route *new = NULL;
-  bool noWay;
   use = connects->routes;
   while (use) {
     switchAllowed(map->routes[use->routeId], false);
     first->allowed = second->allowed = true;
-    noWay = false;
-    new = startDijkstra(first, second, connects, &noWay);
+    new = startDijkstra(first, second, connects);
     switchAllowed(map->routes[use->routeId], true);
     if (!new) {
       return false;
     }
-    if (new) {
-      freeRoute(new);
-    }
+    freeRoute(new);
     use = use->next;
   }
   use = connects->routes;
-  Edges *edges;
-  unsigned help;
   while (use) {
     switchAllowed(map->routes[use->routeId], false);
     first->allowed = second->allowed = true;
-    noWay = false;
-    new = startDijkstra(first, second, connects, &noWay);
-//    if (noWay) {
-//      edges = map->routes[use->routeId]->edges;
-//      while (edges) {
-//        if (edges->road != connects) {
-//          cancelRoute(edges->road, use->routeId);
-//        }
-//        edges = edges->next;
-//      }
-//      switchAllowed(map->routes[use->routeId], true);
-//      freeRoute(map->routes[use->routeId]);
-//      map->routes[use->routeId] = NULL;
-//    }
-//    else {
-      changeRoute(map->routes[use->routeId], new, connects, first);
-      switchAllowed(map->routes[use->routeId], true);
-      giveId(map->routes[use->routeId], use->routeId);
-      free(new);
-//    }
-//    if (noWay) {
-//      help = use->routeId;
-//      use = use->next;
-//      cancelRoute(connects, help);
-//    }
+    new = startDijkstra(first, second, connects);
+    changeRoute(map->routes[use->routeId], new, connects, first);
+    switchAllowed(map->routes[use->routeId], true);
+    giveId(map->routes[use->routeId], use->routeId);
+    free(new);
+    use = use->next;
   }
   deleteEdge(first, connects);
   deleteEdge(second, connects);

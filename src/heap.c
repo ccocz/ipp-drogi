@@ -86,7 +86,7 @@ inline bool maxi(int x, int y) {
 void heapifyMin(HeapNode *root) {
   if (!root->left && root->right) {
     if (root->right->distance == root->distance) {
-      if(maxi(root->right->year, root->year)) {
+      if (maxi(root->right->year, root->year)) {
         swapInfo(root->right, root);
         heapifyMin(root->right);
       }
@@ -97,7 +97,7 @@ void heapifyMin(HeapNode *root) {
   }
   else if (root->left && !root->right) {
     if (root->left->distance == root->distance) {
-      if(maxi(root->left->year, root->year)) {
+      if (maxi(root->left->year, root->year)) {
         swapInfo(root->left, root);
         heapifyMin(root->left);
       }
