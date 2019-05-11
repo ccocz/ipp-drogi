@@ -72,12 +72,7 @@ void swapInfo(HeapNode *a, HeapNode *b) {
 }
 
 inline bool maxi(int x, int y) {
-  if (x < 0 && y < 0) {
-    return x <= y;
-  }
-  else {
-    return x >= y;
-  }
+  return x >= y;
 }
 
 void heapifyMin(HeapNode *root) {

@@ -83,7 +83,7 @@ bool badName(const char *city) {
       return true;
     }
   }
-  return false;
+  return n == 0;
 }
 
 int MOD(size_t x, int mod) {
@@ -228,21 +228,11 @@ bool repairRoad(Map *map, const char *city1,
 }
 
 bool maxi(int x, int y) {
-  if (x < 0 && y < 0) {
-    return x <= y;
-  }
-  else {
-    return x >= y;
-  }
+  return x >= y;
 }
 
 int getMini(int x, int y) {
-  if (x < 0 && y < 0) {
-    return x > y ? x : y;
-  }
-  else {
-    return x < y ? x : y;
-  }
+  return x < y ? x : y;
 }
 
 City *toCity(Road *road, City *from) {
