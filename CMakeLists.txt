@@ -6,6 +6,10 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif ()
 
+#remove this
+
+set(CMAKE_C_STANDARD 11)
+
 # Nie chcemy oglądać komunikatów o procentowym postępie kompilacji.
 set_property(GLOBAL PROPERTY RULE_MESSAGES OFF)
 

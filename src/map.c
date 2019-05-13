@@ -720,7 +720,7 @@ size_t findSize(Route *route, unsigned routeId) {
   return ret;
 }
 
-char const* getRouteDescription(Map *map, unsigned routeId) {
+const char *getRouteDescription(Map *map, unsigned routeId) {
   if (routeId > 999 || !map->routes[routeId]) {
     char *x = malloc(1);
     x[0] = '\0';
