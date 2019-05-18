@@ -10,20 +10,25 @@ typedef struct Heap Heap;
 typedef struct Queue Queue;
 typedef struct Road Road;
 
+/**
+ * @brief Structure for certain heap node
+ */
 struct HeapNode{
-  City *city;
-  Road *from;
-  bool visited;
-  uint64_t distance;
-  int year;
-  struct HeapNode *parent;
-  struct HeapNode *left;
-  struct HeapNode *right;
+  City *city;               /**<The city in the node*/
+  Road *from;               /**<Best way found to that node*/
+  bool visited;             /**<Is the node visited before*/
+  uint64_t distance;        /**<The best distance to node found so far*/
+  int year;                 /**<The newest year to node found so far*/
+  struct HeapNode *parent;  /**<Parent node in the heap*/
+  struct HeapNode *left;    /**<Left node in the heap*/
+  struct HeapNode *right;   /**<Right node in the heap*/
 };
-
+/**
+ * @brief Structure for whole heap
+ */
 struct Heap{
-  HeapNode *root;
-  Queue *last;
+  HeapNode *root;           /**<The root of the heap*/
+  Queue *last;              /**<Structure queue used to build heap*/
 };
 
 Heap *newHeap(City *root);

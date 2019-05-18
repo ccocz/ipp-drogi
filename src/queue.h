@@ -6,16 +6,20 @@
 typedef struct HeapNode HeapNode;
 typedef struct QueueNode QueueNode;
 typedef struct Queue Queue;
-
+/**
+ * @brief Structure for certain queue element
+ */
 struct QueueNode{
-  HeapNode *node;
-  struct QueueNode *next;
-  struct QueueNode *prev;
+  HeapNode *node;           /**<The node in the heap element represents*/
+  struct QueueNode *next;   /**<Next queue element*/
+  struct QueueNode *prev;   /**<Previous queue element*/
 };
-
+/**
+ * @brief Structure for whole of the queue
+ */
 struct Queue{
-  QueueNode *head;
-  QueueNode *tail;
+  QueueNode *head;          /**<The head of the queue*/
+  QueueNode *tail;          /**<The tail of the queue*/
 };
 
 Queue *newQueue(void);

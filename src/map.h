@@ -13,57 +13,70 @@
 #include <stdint.h>
 #include "heap.h"
 
-#define N 7213
-#define R 1000
+#define N 7213  /**<Lucky number for division of cities for hashing*/
+#define R 1000  /**<Maximum possible route id plus one*/
 
-typedef struct Road Road;
-typedef struct City City;
-typedef struct HeapNode HeapNode;
-typedef struct Route Route;
-typedef struct Edges Edges;
-typedef struct Routes Routes;
+typedef struct Road Road;          /**<Structure for list of roads*/
+typedef struct City City;          /**<Structure for city*/
+typedef struct HeapNode HeapNode;  /**<Structure for heap node*/
+typedef struct Route Route;        /**<Structure for route*/
+typedef struct Edges Edges;        /**<Structure for list of edges*/
+typedef struct Routes Routes;      /**<Structure for list of routes*/
 
+/**
+ * @brief Structure for city
+ */
 struct City {
-  char *name;
-  City *next;
-  bool allowed;
-  HeapNode *heapNode;
-  Edges *edges;
+  char *name;           /**<Name of the city*/
+  City *next;           /**<Next city in the list*/
+  bool allowed;         /**<Allowance of the city*/
+  HeapNode *heapNode;   /**<Address of the city in heap*/
+  Edges *edges;         /**<Adjacent cities list*/
 };
-
+/**
+ * @brief Structure for road between cities
+ */
 struct Road {
-  City *from;
-  City *to;
-  unsigned length;
-  int year;
-  Routes *routes;
-  Road *next;
-  Road *prev;
+  City *from;           /**<Beginning of the road*/
+  City *to;             /**<Ending of the road*/
+  unsigned length;      /**<Length of the road*/
+  int year;             /**<Length of the road*/
+  Routes *routes;       /**<Routes from which road passes*/
+  Road *next;           /**<Next road in the list*/
+  Road *prev;           /**<Previous road in the list*/
 };
-
+/**
+ * @brief Structure for list of routes
+ */
 struct Routes {
-  unsigned routeId;
-  Routes *next;
+  unsigned routeId;     /**<id of the route*/
+  Routes *next;         /**<Next route in the list*/
 };
-
+/**
+ * @brief Structure for edges
+ */
 struct Edges{
-  Road *road;
-  Edges *prev;
-  Edges *next;
+  Road *road;           /**<Address of the road*/
+  Edges *prev;          /**<Previous road in the list*/
+  Edges *next;          /**<Next road in the list*/
 };
-
+/**
+ * @brief Structure for route
+ */
 struct Route {
-  City *start;
-  City *end;
-  uint64_t totalCost;
-  int year;
-  Edges *edges;
+  City *start;          /**<Starting city of the route*/
+  City *end;            /**<Ending city of the route*/
+  uint64_t totalCost;   /**<Total length of the route*/
+  int year;             /**<Oldest year of the route*/
+  Edges *edges;         /**<List of edges in the route*/
 };
-
+/**
+ * @brief Structure for whole of the map
+ */
 struct Map{
-  City *cities[N];
-  Route *routes[R];
-  Road *roads;
+  City *cities[N];      /**<Array of cities on the map*/
+  Route *routes[R];     /**<Array of routes on the map*/
+  Road *roads;          /**<List of roads on the map*/
 };
 
 /**

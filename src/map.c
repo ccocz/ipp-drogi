@@ -254,13 +254,16 @@ void dijkstra(Heap *Q, Road *banned) {
     while (adj) {
       adjRoad = adj->road;
       adjCity = toCity(adjRoad, best->city);
-      if (adjRoad != banned && adjCity->allowed && !adjCity->heapNode->visited ) {
+      if (adjRoad != banned && adjCity->allowed &&
+          !adjCity->heapNode->visited ) {
         if (best->distance + adjRoad->length < adjCity->heapNode->distance) {
-          decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, getMini(best->year, adjRoad->year));
+          decreaseValue(adjCity->heapNode, best->distance + adjRoad->length,
+                        getMini(best->year, adjRoad->year));
           adjCity->heapNode->from = adjRoad;
         } else if (best->distance + adjRoad->length == adjCity->heapNode->distance) {
           if (maxi(getMini(best->year, adjRoad->year), adjCity->heapNode->year)) {
-            decreaseValue(adjCity->heapNode, best->distance + adjRoad->length, getMini(best->year, adjRoad->year));
+            decreaseValue(adjCity->heapNode, best->distance + adjRoad->length,
+                          getMini(best->year, adjRoad->year));
             adjCity->heapNode->from = adjRoad;
           }
         }
@@ -286,8 +289,8 @@ bool checkUnique(Route *route, Road *banned) {
     helpEdges = start->edges;
     while (helpEdges) {
       helpCity = toCity(helpEdges->road, start);
-      if (helpEdges->road != banned && helpCity->allowed && helpCity->heapNode && helpCity != nextCity &&
-          helpCity != prevCity) {
+      if (helpEdges->road != banned && helpCity->allowed &&
+          helpCity->heapNode && helpCity != nextCity && helpCity != prevCity) {
         if (helpCity->heapNode->distance + helpEdges->road->length == start->heapNode->distance &&
             getMini(helpCity->heapNode->year, helpEdges->road->year) == start->heapNode->year) {
           return false;
@@ -516,10 +519,12 @@ bool extendRoute(Map *map, unsigned routeId, const char *city) {
       map->routes[routeId] = mergeRoutes(my, fromTail, false);
       freeRoute(fromHead);
     } else {
-      if (fromHead->totalCost == fromTail->totalCost && maxi(fromHead->year, fromTail->year)) {
+      if (fromHead->totalCost == fromTail->totalCost && maxi(fromHead->year,
+          fromTail->year)) {
         map->routes[routeId] = mergeRoutes(my, fromHead, true);
         freeRoute(fromTail);
-      } else if (fromHead->totalCost == fromTail->totalCost && maxi(fromTail->year, fromHead->year)) {
+      } else if (fromHead->totalCost == fromTail->totalCost
+                 && maxi(fromTail->year, fromHead->year)) {
         map->routes[routeId] = mergeRoutes(my, fromTail, false);
         freeRoute(fromHead);
       } else {

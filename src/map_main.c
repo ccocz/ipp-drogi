@@ -13,12 +13,14 @@ Road *isConnected(City *city1, City *city2);
 City *addCity(Map *map, const char *city);
 void connectCities(Map *map, City *city1, City *city2,
                    unsigned length, int builtYear);
-
+/**
+ * @brief Structure to combine command's components
+ */
 struct Command {
-  char *line;
-  size_t length;
-  int lineNumber;
-  Map *map;
+  char *line;     /**<The command itself represented as a string*/
+  size_t length;  /**<Length of the command*/
+  int lineNumber; /**<Line number in input which command is given*/
+  Map *map;       /**<Structure map which is used in all of the commands*/
 };
 
 typedef struct Command Command;
@@ -85,7 +87,7 @@ bool isUInt(const char *s) {
     }
   }
   if (nonZero == n) {
-    return false;
+    return true;
   }
   const char *maxi = "4294967295\0";
   n -= nonZero;
@@ -109,20 +111,20 @@ void errorOnLine(int lineNumber) {
 void checkAddRoad(Command command) {
   size_t lastPosition = strlen("addRoad;\0");
   char *city1 = nextComponent(&lastPosition, lastPosition, command.line);
-  if (command.line[lastPosition] != ';') {
+  if (!strlen(city1) || command.line[lastPosition] != ';') {
     free(city1);
     errorOnLine(command.lineNumber);
     return;
   }
   char *city2 = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (command.line[lastPosition] != ';') {
+  if (!strlen(city2) || command.line[lastPosition] != ';') {
     free(city1);
     free(city2);
     errorOnLine(command.lineNumber);
     return;
   }
   char *length = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (command.line[lastPosition] != ';' || !isUInt(length)) {
+  if (!strlen(length) || command.line[lastPosition] != ';' || !isUInt(length)) {
     free(city1);
     free(city2);
     free(length);
@@ -130,7 +132,7 @@ void checkAddRoad(Command command) {
     return;
   }
   char *builtYear = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (command.line[lastPosition] != '\n' || !isInt(builtYear)) {
+  if (!strlen(builtYear) || command.line[lastPosition] != '\n' || !isInt(builtYear)) {
     free(city1);
     free(city2);
     free(length);
@@ -152,20 +154,21 @@ void checkAddRoad(Command command) {
 void checkRepairRoad(Command command) {
   size_t lastPosition = strlen("repairRoad;\0");
   char *city1 = nextComponent(&lastPosition, lastPosition, command.line);
-  if (command.line[lastPosition] != ';') {
+  if (!strlen(city1) || command.line[lastPosition] != ';') {
     free(city1);
     errorOnLine(command.lineNumber);
     return;
   }
   char *city2 = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (command.line[lastPosition] != ';') {
+  if (!strlen(city2) || command.line[lastPosition] != ';') {
     free(city1);
     free(city2);
     errorOnLine(command.lineNumber);
     return;
   }
   char *repairYear = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (command.line[lastPosition] != '\n' || !isInt(repairYear)) {
+  if (!strlen(repairYear) || command.line[lastPosition] != '\n' || !isInt
+      (repairYear)) {
     free(city1);
     free(city2);
     free(repairYear);
@@ -184,14 +187,15 @@ void checkRepairRoad(Command command) {
 void checkDescription(Command command) {
   size_t lastPosition = strlen("getRouteDescription;\0");
   char *routeId = nextComponent(&lastPosition, lastPosition, command.line);
-  if (command.line[lastPosition] != '\n' || !isUInt(routeId)) {
+  if (!strlen(routeId) || command.line[lastPosition] != '\n' || !isUInt
+      (routeId)) {
     free(routeId);
     errorOnLine(command.lineNumber);
     return;
   }
   unsigned id = strtol(routeId, NULL, 10);
   const char *result = getRouteDescription(command.map, id);
-  if (result && strlen(result)) {
+  if (result) {
     puts(result);
   }
   free(routeId);
@@ -200,9 +204,15 @@ void checkDescription(Command command) {
 
 bool checkRouteFirst(Command command) {
   size_t lastPosition = 0;
-  free(nextComponent(&lastPosition, 0, command.line));
+  char *routeId = nextComponent(&lastPosition, 0, command.line);
+  unsigned id = strtol(routeId, NULL, 10);
+  if (id > 999 || command.map->routes[id]) {
+    free(routeId);
+    return false;
+  }
+  free(routeId);
   char *lastCity = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (command.line[lastPosition] != ';') {
+  if (badName(lastCity) || command.line[lastPosition] != ';') {
     free(lastCity);
     return false;
   }
@@ -218,34 +228,39 @@ bool checkRouteFirst(Command command) {
       return false;
     }
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
-    if (command.line[lastPosition] != ';' || !isUInt(use)) {
+    if (!strlen(use) || command.line[lastPosition] != ';' || !isUInt(use)) {
       free(use);
       return false;
     }
     length = strtol(use, NULL, 10);
     free(use);
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
-    if (command.line[lastPosition] != ';' || !isInt(use)) {
+    if (!strlen(use) || command.line[lastPosition] != ';' || !isInt(use)) {
       free(use);
       return false;
     }
     year = strtol(use, NULL, 10);
     free(use);
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
+    if (badName(use)) {
+      free(use);
+      return false;
+    }
     if (command.line[lastPosition] == '\n') {
       stop = true;
     } else if (command.line[lastPosition] != ';') {
       free(use);
       return false;
     }
-    free(use);
     right = cityExists(command.map, use);
     if (left && right) {
       road = isConnected(left, right);
-      if (road->length != length || road->year > year) {
+      if (road && (road->length != length || road->year > year)) {
+        free(use);
         return false;
       }
     }
+    free(use);
     left = right;
   }
   return true;
@@ -266,10 +281,10 @@ void makeNewRoute(Command command) {
   free(lastCity);
   Route *newRoute = malloc(sizeof(Route));
   Edges *useEdges;
+  Road *useRoad;
   newRoute->start = left;
   newRoute->edges = NULL;
   while (!stop) {
-    puts(left->name);
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
     length = strtol(use, NULL, 10);
     free(use);
@@ -288,8 +303,11 @@ void makeNewRoute(Command command) {
       }
     }
     free(use);
-    if (!isConnected(left, right)) {
+    useRoad = isConnected(left, right);
+    if (!useRoad) {
       connectCities(command.map, left, right, length, year);
+    } else {
+      useRoad->year = year;
     }
     useEdges = malloc(sizeof(Edges));
     useEdges->road = isConnected(left, right);
@@ -332,7 +350,7 @@ void switchCommand(Command command) {
   } else if (!strcmp(beginWith, "getRouteDescription\0")) {
     checkDescription(command);
   } else {
-    if (isUInt(beginWith)) {
+    if (isUInt(beginWith) && (unsigned)strtol(beginWith, NULL, 10)) {
       checkNewRoute(command);
     } else {
       fprintf(stderr, "ERROR %d\n", command.lineNumber);
