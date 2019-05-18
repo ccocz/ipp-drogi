@@ -22,8 +22,16 @@ struct Command {
   int lineNumber; /**<Line number in input which command is given*/
   Map *map;       /**<Structure map which is used in all of the commands*/
 };
+/**
+ * @brief Structure to store visited cities for proper route
+ */
+struct visitedCities {
+  char *name;                     /**<Name of the city*/
+  struct visitedCities *next;     /**<Next city in the list*/
+};
 
 typedef struct Command Command;
+typedef struct visitedCities visitedCities;
 
 bool endOfComponent(char c) {
   return c == ';' || c == '\0' || c == '\n';
@@ -202,6 +210,33 @@ void checkDescription(Command command) {
   free((void *)result);
 }
 
+void addVisited(visitedCities **cities, char *city) {
+  visitedCities *use = malloc(sizeof(visitedCities));
+  use->name = city;
+  use->next = *cities;
+  (*cities) = use;
+}
+
+void freeVisited(visitedCities *cities) {
+  visitedCities *use;
+  while (cities) {
+    use = cities->next;
+    free(cities->name);
+    free(cities);
+    cities = use;
+  }
+}
+
+bool isVisited(visitedCities *cities, const char *city) {
+  while (cities) {
+    if (!strcmp(cities->name, city)) {
+      return true;
+    }
+    cities = cities->next;
+  }
+  return false;
+}
+
 bool checkRouteFirst(Command command) {
   size_t lastPosition = 0;
   char *routeId = nextComponent(&lastPosition, 0, command.line);
@@ -222,13 +257,17 @@ bool checkRouteFirst(Command command) {
   int year;
   City *left = cityExists(command.map, lastCity), *right;
   Road *road;
-  free(lastCity);
+  visitedCities *cities = NULL;
+  addVisited(&cities, lastCity);
   while (!stop) {
     if (lastPosition + 1 > command.length - 1) {
+      freeVisited(cities);
       return false;
     }
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
-    if (!strlen(use) || command.line[lastPosition] != ';' || !isUInt(use)) {
+    if (!strlen(use) || command.line[lastPosition] != ';' || !isUInt(use) ||
+        !(unsigned)strtol(use, NULL, 10)) {
+      freeVisited(cities);
       free(use);
       return false;
     }
@@ -236,33 +275,37 @@ bool checkRouteFirst(Command command) {
     free(use);
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
     if (!strlen(use) || command.line[lastPosition] != ';' || !isInt(use)) {
+      freeVisited(cities);
       free(use);
       return false;
     }
     year = strtol(use, NULL, 10);
     free(use);
     use = nextComponent(&lastPosition, ++lastPosition, command.line);
-    if (badName(use)) {
+    if (badName(use) || isVisited(cities, use)) {
+      freeVisited(cities);
       free(use);
       return false;
     }
     if (command.line[lastPosition] == '\n') {
       stop = true;
     } else if (command.line[lastPosition] != ';') {
+      freeVisited(cities);
       free(use);
       return false;
     }
+    addVisited(&cities, use);
     right = cityExists(command.map, use);
     if (left && right) {
       road = isConnected(left, right);
       if (road && (road->length != length || road->year > year)) {
-        free(use);
+        freeVisited(cities);
         return false;
       }
     }
-    free(use);
     left = right;
   }
+  freeVisited(cities);
   return true;
 }
 
