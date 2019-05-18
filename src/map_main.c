@@ -140,7 +140,8 @@ void checkAddRoad(Command command) {
     return;
   }
   char *builtYear = nextComponent(&lastPosition, ++lastPosition, command.line);
-  if (!strlen(builtYear) || command.line[lastPosition] != '\n' || !isInt(builtYear)) {
+  if (!strlen(builtYear) || command.line[lastPosition] != '\n' ||
+      !isInt(builtYear)) {
     free(city1);
     free(city2);
     free(length);
