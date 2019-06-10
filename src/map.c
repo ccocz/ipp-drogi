@@ -96,11 +96,11 @@ int MOD(int x, int mod) {
 int hashIt(const char *s) {
   size_t n = strlen(s);
   int mod = N;
-  int base = 1453;
+  int base = 11;
   int hash = 0;
   for (size_t i = 0; i < n; i++) {
     hash = (hash + (((MOD((int)s[i], mod) % mod) * base) % mod)) % mod;
-    base = (base * 1453) % mod;
+    base = (base * 11) % mod;
   }
   return hash;
 }
@@ -733,20 +733,27 @@ const char *getRouteDescription(Map *map, unsigned routeId) {
   }
   Route *route = map->routes[routeId];
   char *ret = calloc(findSize(route, routeId), sizeof(char));
-  sprintf(&ret[strlen(ret)], "%u%c", routeId, ';');
+  size_t total_size = 0;
+  sprintf(ret + total_size, "%u%c", routeId, ';');
+  total_size += intLen(routeId) + 1;
   City *start = route->start;
   Edges *edges = route->edges;
-  sprintf(&ret[strlen(ret)], "%s%c", route->start->name, ';');
+  sprintf(ret + total_size, "%s%c", route->start->name, ';');
+  total_size += strlen(route->start->name) + 1;
   while (start) {
     if (edges) {
       start = toCity(edges->road, start);
-      sprintf(&ret[strlen(ret)], "%u%c", edges->road->length, ';');
-      sprintf(&ret[strlen(ret)], "%d%c", edges->road->year, ';');
+      sprintf(ret + total_size, "%u%c", edges->road->length, ';');
+      total_size += intLen(edges->road->length) + 1;
+      sprintf(ret + total_size, "%d%c", edges->road->year, ';');
+      total_size += intLen(edges->road->year) + 1;
       edges = edges->next;
       if (edges) {
-        sprintf(&ret[strlen(ret)], "%s%c", start->name, ';');
+        sprintf(ret + total_size, "%s%c", start->name, ';');
+        total_size += strlen(start->name) + 1;
       } else {
-        sprintf(&ret[strlen(ret)], "%s", start->name);
+        sprintf(ret + total_size, "%s", start->name);
+        total_size += strlen(start->name);
       }
     } else {
       start = NULL;

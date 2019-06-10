@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include "heap.h"
 
-#define N 7213  /**<Lucky number for division of cities for hashing*/
+#define N 60013  /**<Lucky number for division of cities for hashing*/
 #define R 1000  /**<Maximum possible route id plus one*/
 
 typedef struct Road Road;          /**<Structure for list of roads*/
