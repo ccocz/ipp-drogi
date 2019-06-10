@@ -205,4 +205,17 @@ bool removeRoad(Map *map, const char *city1, const char *city2);
  */
 char const* getRouteDescription(Map *map, unsigned routeId);
 
+/**
+ * @brief Usuwa z mapy dróg drogę krajową o podanym numerze, jeśli taka
+ * istnieje, dając wynik true, a w przeciwnym przypadku, tzn. gdy podana
+ * droga krajowa nie istnieje lub podany numer jest niepoprawny, niczego nie
+ * zmienia w mapie dróg, dając wynik false. Nie usuwa odcinków dróg ani miast.
+ * @param[in,out] map    – wskaźnik na strukturę przechowującą mapę dróg;
+ * @param[in] routeId    – numer drogi krajowej.
+ * @return Wartość @p true jeśli droga krajowa została usunięty, a w przeciwnym
+ * przypadku tzn. gdy podana droga krajowa nie istnieje lub podany numer jest
+ * niepoprawny, wartość @p false.
+ */
+bool removeRoute(Map *map, unsigned routeId);
+
 #endif /* __MAP_H__ */

@@ -75,6 +75,9 @@ bool isInt(const char *s) {
   } else if (n < strlen(maxi)) {
     return true;
   } else {
+    if (s[0] == '-') {
+      maxi = "2147483648\0";
+    }
     if (strcmp(&s[nonZero], maxi) > 0) {
       return false;
     } else {
@@ -379,6 +382,101 @@ void checkNewRoute(Command command) {
   makeNewRoute(command);
 }
 
+void checkAddRoute(Command command) {
+  size_t lastPosition = strlen("newRoute;\0");
+  char *routeId = nextComponent(&lastPosition, lastPosition, command.line);
+  if (!strlen(routeId) || command.line[lastPosition] != ';' || !isUInt
+    (routeId)) {
+    free(routeId);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  char *city1 = nextComponent(&lastPosition, ++lastPosition, command.line);
+  if (!strlen(city1) || command.line[lastPosition] != ';') {
+    free(routeId);
+    free(city1);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  char *city2 = nextComponent(&lastPosition, ++lastPosition, command.line);
+  if (!strlen(city2) || command.line[lastPosition] != '\n') {
+    free(routeId);
+    free(city1);
+    free(city2);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  unsigned id = strtol(routeId, NULL, 10);
+  if (!newRoute(command.map, id, city1, city2)) {
+    errorOnLine(command.lineNumber);
+  }
+  free(routeId);
+  free(city1);
+  free(city2);
+}
+
+void checkExtendRoute(Command command) {
+  size_t lastPosition = strlen("extendRoute;\0");
+  char *routeId = nextComponent(&lastPosition, lastPosition, command.line);
+  if (!strlen(routeId) || command.line[lastPosition] != ';' || !isUInt
+    (routeId)) {
+    free(routeId);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  char *city = nextComponent(&lastPosition, ++lastPosition, command.line);
+  if (!strlen(city) || command.line[lastPosition] != '\n') {
+    free(routeId);
+    free(city);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  unsigned id = strtol(routeId, NULL, 10);
+  if (!extendRoute(command.map, id, city)) {
+    errorOnLine(command.lineNumber);
+  }
+  free(routeId);
+  free(city);
+}
+
+void checkRemoveRoad(Command command) {
+  size_t lastPosition = strlen("removeRoad;\0");
+  char *city1 = nextComponent(&lastPosition, lastPosition, command.line);
+  if (!strlen(city1) || command.line[lastPosition] != ';') {
+    free(city1);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  char *city2 = nextComponent(&lastPosition, ++lastPosition, command.line);
+  if (!strlen(city2) || command.line[lastPosition] != '\n') {
+    free(city1);
+    free(city2);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  if (!removeRoad(command.map, city1, city2)) {
+    errorOnLine(command.lineNumber);
+  }
+  free(city1);
+  free(city2);
+}
+
+void checkRemoveRoute(Command command) {
+  size_t lastPosition = strlen("removeRoute;\0");
+  char *routeId = nextComponent(&lastPosition, lastPosition, command.line);
+  if (!strlen(routeId) || command.line[lastPosition] != '\n' || !isUInt
+    (routeId)) {
+    free(routeId);
+    errorOnLine(command.lineNumber);
+    return;
+  }
+  unsigned id = strtol(routeId, NULL, 10);
+  if (!removeRoute(command.map, id)) {
+    errorOnLine(command.lineNumber);
+  }
+  free(routeId);
+}
+
 void switchCommand(Command command) {
   if (command.line[0] == '#' || command.line[0] == '\n') {
     return;
@@ -393,6 +491,14 @@ void switchCommand(Command command) {
     checkRepairRoad(command);
   } else if (!strcmp(beginWith, "getRouteDescription\0")) {
     checkDescription(command);
+  } else if (!strcmp(beginWith, "newRoute\0")) {
+    checkAddRoute(command);
+  } else if (!strcmp(beginWith, "extendRoute\0")) {
+    checkExtendRoute(command);
+  } else if (!strcmp(beginWith, "removeRoad\0")) {
+    checkRemoveRoad(command);
+  } else if (!strcmp(beginWith, "removeRoute\0")) {
+    checkRemoveRoute(command);
   } else {
     if (isUInt(beginWith) && (unsigned)strtol(beginWith, NULL, 10)) {
       checkNewRoute(command);

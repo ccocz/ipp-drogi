@@ -86,8 +86,8 @@ bool badName(const char *city) {
   return n == 0;
 }
 
-int MOD(size_t x, int mod) {
-  while (x > 0) {
+int MOD(int x, int mod) {
+  while (x < 0) {
     x += mod;
   }
   return x;
@@ -99,7 +99,7 @@ int hashIt(const char *s) {
   int base = 1453;
   int hash = 0;
   for (size_t i = 0; i < n; i++) {
-    hash = (hash + (((MOD(s[i], mod) % mod) * base) % mod)) % mod;
+    hash = (hash + (((MOD((int)s[i], mod) % mod) * base) % mod)) % mod;
     base = (base * 1453) % mod;
   }
   return hash;
@@ -753,4 +753,13 @@ const char *getRouteDescription(Map *map, unsigned routeId) {
     }
   }
   return ret;
+}
+
+bool removeRoute(Map *map, unsigned routeId) {
+  if (routeId > 999 || !routeId || !map->routes[routeId]) {
+    return false;
+  }
+  freeRoute(map->routes[routeId]);
+  map->routes[routeId] = NULL;
+  return true;
 }
