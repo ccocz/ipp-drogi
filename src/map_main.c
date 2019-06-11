@@ -13,6 +13,9 @@ Road *isConnected(City *city1, City *city2);
 City *addCity(Map *map, const char *city);
 void connectCities(Map *map, City *city1, City *city2,
                    unsigned length, int builtYear);
+void giveId(Route *route, unsigned routeId);
+bool existId(Road *road, unsigned id);
+
 /**
  * @brief Structure to combine command's components
  */
@@ -388,6 +391,7 @@ void makeNewRoute(Command command) {
   unsigned id = strtol(routeId, NULL, 0);
   newRoute->edges = starting;
   command.map->routes[id] = newRoute;
+  giveId(newRoute, id);
   free(routeId);
 }
 

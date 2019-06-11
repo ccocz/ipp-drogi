@@ -96,11 +96,11 @@ int MOD(int x, int mod) {
 int hashIt(const char *s) {
   size_t n = strlen(s);
   int mod = N;
-  int base = 11;
+  int base = 1453;
   int hash = 0;
   for (size_t i = 0; i < n; i++) {
     hash = (hash + (((MOD((int)s[i], mod) % mod) * base) % mod)) % mod;
-    base = (base * 11) % mod;
+    base = (base * 1453) % mod;
   }
   return hash;
 }
@@ -642,7 +642,7 @@ bool removeRoad(Map *map, const char *city1, const char *city2) {
   }
   City *first = cityExists(map, city1);
   City *second = cityExists(map, city2);
-  if (!first || !second) {
+  if ((!first || !second) || (first == second)) {
     return false;
   }
   Road *connects = isConnected(first, second);
@@ -762,9 +762,33 @@ const char *getRouteDescription(Map *map, unsigned routeId) {
   return ret;
 }
 
+void removeFromRoad(Road *road, unsigned routeId) {
+  Routes *routes = road->routes;
+  Routes *prev = NULL;
+  bool found = false;
+  while (!found && routes) {
+    if (routes->routeId == routeId) {
+      found = true;
+      if (prev) {
+        prev->next = routes->next;
+      } else {
+        road->routes = routes->next;
+      }
+      free(routes);
+    }
+    prev = routes;
+    routes = routes->next;
+  }
+}
+
 bool removeRoute(Map *map, unsigned routeId) {
   if (routeId > 999 || !routeId || !map->routes[routeId]) {
     return false;
+  }
+  Edges *edges = map->routes[routeId]->edges;
+  while (edges) {
+    removeFromRoad(edges->road, routeId);
+    edges = edges->next;
   }
   freeRoute(map->routes[routeId]);
   map->routes[routeId] = NULL;
