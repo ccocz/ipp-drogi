@@ -253,7 +253,7 @@ bool checkRouteFirst(Command command) {
   free(routeId);
   char *lastCity = nextComponent(&lastPosition, ++lastPosition, command.line,
                                  command.length);
-  if (badName(lastCity) || command.line[lastPosition] != ';') {
+  if (command.line[lastPosition] != ';' || badName(lastCity)) {
     free(lastCity);
     return false;
   }

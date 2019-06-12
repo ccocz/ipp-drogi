@@ -99,7 +99,7 @@ int hashIt(const char *s) {
   int base = 1453;
   int hash = 0;
   for (size_t i = 0; i < n; i++) {
-    hash = (hash + (((MOD((int)s[i], mod) % mod) * base) % mod)) % mod;
+    hash = (hash + ((1LL * MOD((int)s[i], mod) * base) % mod)) % mod;
     base = (base * 1453) % mod;
   }
   return hash;
