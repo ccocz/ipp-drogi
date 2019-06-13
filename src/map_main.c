@@ -390,7 +390,8 @@ void makeNewRoute(Command command) {
   }
   unsigned id = strtol(routeId, NULL, 0);
   newRoute->edges = starting;
-  command.map->routes[id] = newRoute;
+  Map *map = command.map;
+  map->routes[id] = newRoute;
   giveId(newRoute, id);
   free(routeId);
 }

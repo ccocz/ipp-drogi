@@ -74,7 +74,6 @@ struct Route {
  * @brief Structure for whole of the map
  */
 struct Map{
-  int a[N];
   City *cities[N];      /**<Array of cities on the map*/
   Route *routes[R];     /**<Array of routes on the map*/
   Road *roads;          /**<List of roads on the map*/
